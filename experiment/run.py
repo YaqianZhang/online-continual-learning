@@ -35,7 +35,7 @@ def multiple_run(params):
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
             print("-----------run {} training batch {}-------------".format(run, i))
-            print('size: {}, {}'.format(x_train.shape, y_train.shape))
+            print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
             agent.train_learner(x_train, y_train)
             acc_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
@@ -45,6 +45,8 @@ def multiple_run(params):
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
     accuracy_list = np.array(accuracy_list)
+    print("acc_zyq",accuracy_list)
+    np.save("results/"+params.agent + "_"+params.retrieve+'_' + params.data+'_'+str(params.num_tasks)+"_accuracy_list.npy",accuracy_list)
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()
     print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
