@@ -46,6 +46,12 @@ class Reservoir_update(object):
 
         idx_map = {idx_buffer[i].item(): idx_new_data[i].item() for i in range(idx_buffer.size(0))}
         # perform overwrite op
+        for i in list(idx_map.keys()):
+            replay_times = buffer.buffer_replay_times[i].detach().cpu().numpy()
+            buffer.unique_replay_list.append(int(replay_times))
+            buffer.buffer_replay_times[i]=0
+            label = int(buffer.buffer_label[i].detach().cpu().numpy())
+            buffer.replay_sample_label.append(label)
         buffer.buffer_img[list(idx_map.keys())] = x[list(idx_map.values())]
         buffer.buffer_label[list(idx_map.keys())] = y[list(idx_map.values())]
         return list(idx_map.keys())

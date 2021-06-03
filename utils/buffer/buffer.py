@@ -18,6 +18,9 @@ class Buffer(torch.nn.Module):
         input_size = input_size_match[params.data]
         buffer_img = maybe_cuda(torch.FloatTensor(buffer_size, *input_size).fill_(0))
         buffer_label = maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
+        self.buffer_replay_times =maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
+        self.unique_replay_list=[]
+        self.replay_sample_label=[]
 
         # registering as buffer allows us to save the object using `torch.save`
         self.register_buffer('buffer_img', buffer_img)
@@ -26,6 +29,8 @@ class Buffer(torch.nn.Module):
         # define update and retrieve method
         self.update_method = name_match.update_methods[params.update](params)
         self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
+    def update_replay_times(self, indices):
+        self.buffer_replay_times[indices]+=1
 
     def update(self, x, y):
         return self.update_method.update(buffer=self, x=x, y=y)

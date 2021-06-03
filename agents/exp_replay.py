@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch.utils import data
 from utils.buffer.buffer import Buffer
 from agents.base import ContinualLearner
@@ -29,6 +30,7 @@ class ExperienceReplay(ContinualLearner):
         losses_mem = AverageMeter()
         acc_batch = AverageMeter()
         acc_mem = AverageMeter()
+
 
         for ep in range(self.epoch):
             for i, batch_data in enumerate(train_loader):
@@ -102,4 +104,14 @@ class ExperienceReplay(ContinualLearner):
                         'running mem acc: {:.3f}'
                             .format(i, losses_mem.avg(), acc_mem.avg())
                     )
+
         self.after_train()
+        ## todo zyq: save replay times and label  of all the samples ever enter the memory
+        removed_sample = np.array(self.buffer.unique_replay_list)
+        arr = self.buffer.buffer_replay_times.detach().cpu().numpy()
+        exp_tag =self.params.agent+"_"+self.params.retrieve+"_"+self.params.data+"_"+str(self.params.num_tasks)
+        np.save("results/"+exp_tag+"_removed_sample.npy",removed_sample)
+        np.save("results/"+exp_tag+"_remain_sample.npy",arr)
+
+        np.save("results/"+exp_tag+"_sample_label.npy", np.array(self.buffer.replay_sample_label))
+        np.save("results/"+exp_tag+"_sample_label_remain.npy", self.buffer.buffer_label.detach().cpu().numpy())

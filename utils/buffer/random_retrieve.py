@@ -6,4 +6,6 @@ class Random_retrieve(object):
         self.num_retrieve = params.eps_mem_batch
 
     def retrieve(self, buffer, **kwargs):
-        return random_retrieve(buffer, self.num_retrieve)
+        x,y,indices = random_retrieve(buffer, self.num_retrieve,return_indices=True)
+        buffer.update_replay_times(indices)
+        return x,y
