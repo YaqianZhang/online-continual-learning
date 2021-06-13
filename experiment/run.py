@@ -145,7 +145,7 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
         result_dict['Time'] = run_end - run_start
         df = df.append(result_dict, ignore_index=True)
         save_dataframe_csv(df, table_path, save_path)
-        
+
     accuracy_list = np.array(accuracy_list)
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()
