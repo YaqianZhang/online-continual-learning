@@ -45,8 +45,10 @@ class Icarl(ContinualLearner):
                 all_cls_num = len(self.new_labels) + len(self.old_labels)
                 target_labels = utils.ohe_label(train_y_copy, all_cls_num, device=train_y_copy.device).float()
                 if self.prev_model is not None:
-                    mem_x, mem_y = random_retrieve(self.buffer, self.batch,
-                                                   excl_indices=updated_idx)
+                    mem_x, mem_y,indices = random_retrieve(self.buffer, self.batch,
+                                                   excl_indices=updated_idx,return_indices=True)
+                    #zyq: icarl replay update
+                    self.buffer.update_replay_times(indices)
                     mem_x = maybe_cuda(mem_x, self.cuda)
                     batch_x = torch.cat([train_x, mem_x])
                     target_labels = torch.cat([target_labels, torch.zeros_like(target_labels)])
@@ -63,3 +65,8 @@ class Icarl(ContinualLearner):
                 loss.backward()
                 self.opt.step()
                 updated_idx += self.buffer.update(train_x, train_y)
+
+            ## todo zyq: save replay times and label  of all the samples ever enter the memory
+            #self.buffer.save_buffer_info()
+
+

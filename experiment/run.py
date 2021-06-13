@@ -33,6 +33,7 @@ def multiple_run(params):
 
         # prepare val data loader
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
+
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
             print("-----------run {} training batch {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
@@ -44,9 +45,24 @@ def multiple_run(params):
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
+
     accuracy_list = np.array(accuracy_list)
-    print("acc_zyq",accuracy_list)
-    np.save("results/"+params.agent + "_"+params.retrieve+'_' + params.data+'_'+str(params.num_tasks)+"_accuracy_list.npy",accuracy_list)
+    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
+    trick=""
+    if(params.nmc_trick):
+        trick += "NMC_"
+    if(params.use_tmp_buffer):
+        trick += "tmpMem_"
+    # t = time.localtime()
+    #timestamp = time.strftime('%b-%d-%Y_%H%M', t)
+    folder_path ="results/"+str(params.seed)
+    if(not os.path.exists(folder_path)):
+        os.mkdir(folder_path)
+    prefix = folder_path+'/'+params.agent + "_"+params.retrieve+ "_"+params.update+'_' +trick+ params.data+'_'+str(params.num_tasks)+"_"+str(params.mem_size)
+    np.save(prefix +"_accuracy_list.npy",accuracy_list)
+    if(params.agent== 'ER' or params.agent == "ICARL"):
+        agent.buffer.save_buffer_info(prefix)
+
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()
     print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
@@ -129,6 +145,7 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
         result_dict['Time'] = run_end - run_start
         df = df.append(result_dict, ignore_index=True)
         save_dataframe_csv(df, table_path, save_path)
+        
     accuracy_list = np.array(accuracy_list)
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()

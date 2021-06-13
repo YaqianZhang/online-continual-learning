@@ -18,6 +18,7 @@ def random_retrieve(buffer, num_retrieve, excl_indices=None, return_indices=Fals
 
     y = buffer.buffer_label[indices]
 
+
     if return_indices:
         return x, y, indices
     else:

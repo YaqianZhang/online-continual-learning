@@ -11,6 +11,7 @@ import time
 core50_ntask = {
     'ni': 8,
     'nc': 9,
+    'nc_balance':10,
     'nic': 79,
     'nicv2_79': 79,
     'nicv2_196': 196,
@@ -24,6 +25,7 @@ class CORE50(DatasetBase):
             raise Exception('the max number of runs for CORE50 is 10')
         dataset = 'core50'
         task_nums = core50_ntask[scenario]
+        self.scenario =scenario
         super(CORE50, self).__init__(dataset, scenario, task_nums, params.num_runs, params)
 
 
@@ -34,11 +36,20 @@ class CORE50(DatasetBase):
             self.paths = pkl.load(f)
 
         print("Loading LUP...")
-        with open(os.path.join(self.root, 'LUP.pkl'), 'rb') as f:
+        if(self.scenario == "nc" or self.scenario == "ni"):
+            lup_file_name = 'LUP.pkl'
+            label_file_name = 'labels.pkl'
+        elif(self.scenario=="nc_balance"):
+            lup_file_name = 'LUP_new.pkl'
+            label_file_name = 'labels_new.pkl'
+        else:
+            print("undefined mode nc, nc_balance, ni")
+            assert False
+        with open(os.path.join(self.root, lup_file_name), 'rb') as f:
             self.LUP = pkl.load(f)
 
         print("Loading labels...")
-        with open(os.path.join(self.root, 'labels.pkl'), 'rb') as f:
+        with open(os.path.join(self.root, label_file_name), 'rb') as f:
             self.labels = pkl.load(f)
 
 
@@ -59,7 +70,7 @@ class CORE50(DatasetBase):
         self.test_label = np.asarray(self.labels[self.scenario][cur_run][-1])
 
 
-        if self.scenario == 'nc':
+        if self.scenario == 'nc' or self.scenario == 'nc_balance' :
             self.task_labels = self.labels[self.scenario][cur_run][:-1]
             for labels in self.task_labels:
                 labels = list(set(labels))

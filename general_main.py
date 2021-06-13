@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument('--agent', dest='agent', default='ER',
                         choices=['ER', 'EWC', 'AGEM', 'CNDPM', 'LWF', 'ICARL', 'GDUMB', 'ASER'],
                         help='Agent selection  (default: %(default)s)')
-    parser.add_argument('--update', dest='update', default='random', choices=['random', 'GSS', 'ASER'],
+    parser.add_argument('--update', dest='update', default='random', choices=['random', 'GSS', 'ASER','rt','timestamp','rt2'],
                         help='Update method  (default: %(default)s)')
     parser.add_argument('--retrieve', dest='retrieve', default='random', choices=['MIR', 'random', 'ASER'],
                         help='Retrieve method  (default: %(default)s)')
@@ -82,7 +82,7 @@ if __name__ == "__main__":
                         help='In NI scenario, should sample images be plotted (default: %(default)s)')
     parser.add_argument('--data', dest='data', default="cifar10",
                         help='Path to the dataset. (default: %(default)s)')
-    parser.add_argument('--cl_type', dest='cl_type', default="nc", choices=['nc', 'ni'],
+    parser.add_argument('--cl_type', dest='cl_type', default="nc", choices=['nc', 'ni','nc_balance'],
                         help='Continual learning type: new class "nc" or new instance "ni". (default: %(default)s)')
     parser.add_argument('--ns_factor', dest='ns_factor', nargs='+',
                         default=(0.0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8, 3.2, 3.6), type=float,
@@ -171,6 +171,12 @@ if __name__ == "__main__":
                         help='If True, `min_delta` defines an increase since the last `patience` reset, '
                              'otherwise, it defines an increase after the last event.')
 
+    #### RL ##############
+    parser.add_argument('--use_tmp_buffer',dest='use_tmp_buffer',default=True,type=boolean_string,
+                        help='If True, use a tmp buffer to store the to-be-insert samples from new task/replace indices '
+                             'and insert these into memory at the end of new task')
+
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
+    torch.cuda.set_device(0)
     main(args)

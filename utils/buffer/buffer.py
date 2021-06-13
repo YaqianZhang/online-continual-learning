@@ -2,6 +2,9 @@ from utils.setup_elements import input_size_match
 from utils import name_match #import update_methods, retrieve_methods
 from utils.utils import maybe_cuda
 import torch
+import numpy as np
+
+
 
 class Buffer(torch.nn.Module):
     def __init__(self, model, params):
@@ -11,6 +14,8 @@ class Buffer(torch.nn.Module):
         self.cuda = self.params.cuda
         self.current_index = 0
         self.n_seen_so_far = 0
+        self.task_seen_so_far = 0
+
 
         # define buffer
         buffer_size = params.mem_size
@@ -19,6 +24,7 @@ class Buffer(torch.nn.Module):
         buffer_img = maybe_cuda(torch.FloatTensor(buffer_size, *input_size).fill_(0))
         buffer_label = maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
         self.buffer_replay_times =maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
+        self.buffer_last_replay = maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
         self.unique_replay_list=[]
         self.replay_sample_label=[]
 
@@ -31,9 +37,36 @@ class Buffer(torch.nn.Module):
         self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
     def update_replay_times(self, indices):
         self.buffer_replay_times[indices]+=1
+        self.buffer_last_replay +=1
+        self.buffer_last_replay[indices] =0
 
-    def update(self, x, y):
-        return self.update_method.update(buffer=self, x=x, y=y)
+    def update(self, x, y,tmp_buffer=None):
+        return self.update_method.update(buffer=self, x=x, y=y,tmp_buffer=tmp_buffer)
 
     def retrieve(self, **kwargs):
+        if(self.retrieve_method.num_retrieve==-1):
+            print("dynamic mem batch size")
+
+            self.retrieve_method.num_retrieve = self.task_seen_so_far * 10 # to-do: change 10 to the batch size of new data
         return self.retrieve_method.retrieve(buffer=self, **kwargs)
+    def save_buffer_info(self,prefix=""):
+        removed_sample = np.array(self.unique_replay_list)
+        arr = self.buffer_replay_times.detach().cpu().numpy()
+        np.save(prefix+"_removed_sample.npy",removed_sample)
+        np.save(prefix+"_remain_sample.npy",arr)
+        np.save(prefix+"_sample_label.npy", np.array(self.replay_sample_label))
+        np.save(prefix+"_sample_label_remain.npy", self.buffer_label.detach().cpu().numpy())
+
+    def overwrite(self,idx_map,x,y):
+        ## zyq: save replay_times
+        for i in list(idx_map.keys()):
+            replay_times = self.buffer_replay_times[i].detach().cpu().numpy()
+            self.unique_replay_list.append(int(replay_times))
+            self.buffer_replay_times[i]=0
+            self.buffer_last_replay[i]=0
+            sample_label = int(self.buffer_label[i].detach().cpu().numpy())
+            self.replay_sample_label.append(sample_label)
+        self.buffer_img[list(idx_map.keys())] = x[list(idx_map.values())]
+        self.buffer_label[list(idx_map.keys())] = y[list(idx_map.values())]
+
+

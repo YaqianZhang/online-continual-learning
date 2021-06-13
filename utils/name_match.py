@@ -12,6 +12,7 @@ from agents.lwf import Lwf
 from agents.icarl import Icarl
 from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
+#from utils.buffer.replay_times_update import Replay_times_update
 from utils.buffer.mir_retrieve import MIR_retrieve
 from utils.buffer.gss_greedy_update import GSSGreedyUpdate
 from utils.buffer.aser_retrieve import ASER_retrieve
@@ -46,6 +47,9 @@ retrieve_methods = {
 update_methods = {
     'random': Reservoir_update,
     'GSS': GSSGreedyUpdate,
-    'ASER': ASER_update
+    'ASER': ASER_update,
+    'rt':Reservoir_update,
+'rt2':Reservoir_update,
+    'timestamp':Reservoir_update,
 }
 

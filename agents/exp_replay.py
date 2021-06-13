@@ -1,7 +1,9 @@
 import torch
+import time
 import numpy as np
 from torch.utils import data
 from utils.buffer.buffer import Buffer
+from utils.buffer.tmp_buffer import Tmp_Buffer
 from agents.base import ContinualLearner
 from continuum.data_utils import dataset_transform
 from utils.setup_elements import transforms_match
@@ -12,11 +14,15 @@ class ExperienceReplay(ContinualLearner):
     def __init__(self, model, opt, params):
         super(ExperienceReplay, self).__init__(model, opt, params)
         self.buffer = Buffer(model, params)
+        self.tmp_buffer=Tmp_Buffer(model,params,self.buffer)
         self.mem_size = params.mem_size
         self.eps_mem_batch = params.eps_mem_batch
         self.mem_iters = params.mem_iters
 
+
     def train_learner(self, x_train, y_train):
+
+        self.buffer.task_seen_so_far += 1
         self.before_train(x_train, y_train)
         # set up loader
         train_dataset = dataset_transform(x_train, y_train, transform=transforms_match[self.data])
@@ -91,7 +97,10 @@ class ExperienceReplay(ContinualLearner):
                         self.opt.step()
 
                 # update mem
-                self.buffer.update(batch_x, batch_y)
+
+                self.buffer.update(batch_x, batch_y,self.tmp_buffer)
+
+
 
                 if i % 100 == 1 and self.verbose:
                     print(
@@ -104,14 +113,24 @@ class ExperienceReplay(ContinualLearner):
                         'running mem acc: {:.3f}'
                             .format(i, losses_mem.avg(), acc_mem.avg())
                     )
+            if(self.params.use_tmp_buffer):
+                self.tmp_buffer.update_true_buffer()
 
         self.after_train()
         ## todo zyq: save replay times and label  of all the samples ever enter the memory
-        removed_sample = np.array(self.buffer.unique_replay_list)
-        arr = self.buffer.buffer_replay_times.detach().cpu().numpy()
-        exp_tag =self.params.agent+"_"+self.params.retrieve+"_"+self.params.data+"_"+str(self.params.num_tasks)
-        np.save("results/"+exp_tag+"_removed_sample.npy",removed_sample)
-        np.save("results/"+exp_tag+"_remain_sample.npy",arr)
-
-        np.save("results/"+exp_tag+"_sample_label.npy", np.array(self.buffer.replay_sample_label))
-        np.save("results/"+exp_tag+"_sample_label_remain.npy", self.buffer.buffer_label.detach().cpu().numpy())
+        #self.buffer.save_buffer_info()
+        # removed_sample = np.array(self.buffer.unique_replay_list)
+        # arr = self.buffer.buffer_replay_times.detach().cpu().numpy()
+        # #t = time.localtime()
+        # #timestamp = time.strftime('%b-%d-%Y_%H%M', t)
+        #
+        # trick = ""
+        # if (self.params.nmc_trick):
+        #     trick += "NMC_"
+        #
+        # exp_tag =self.params.agent+"_"+self.params.retrieve+"_"+trick+self.params.data+"_"+str(self.params.num_tasks)
+        # np.save("results/"+exp_tag+"_removed_sample.npy",removed_sample)
+        # np.save("results/"+exp_tag+"_remain_sample.npy",arr)
+        #
+        # np.save("results/"+exp_tag+"_sample_label.npy", np.array(self.buffer.replay_sample_label))
+        # np.save("results/"+exp_tag+"_sample_label_remain.npy", self.buffer.buffer_label.detach().cpu().numpy())
