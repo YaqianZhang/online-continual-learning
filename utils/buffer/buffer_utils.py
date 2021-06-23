@@ -2,7 +2,8 @@ import torch
 import numpy as np
 from utils.utils import maybe_cuda
 from collections import defaultdict
-
+#import os
+#os.environ['cuda']='0'
 
 def random_retrieve(buffer, num_retrieve, excl_indices=None, return_indices=False):
     filled_indices = np.arange(buffer.current_index)
@@ -18,8 +19,14 @@ def random_retrieve(buffer, num_retrieve, excl_indices=None, return_indices=Fals
 
     y = buffer.buffer_label[indices]
 
+    x = maybe_cuda(x)
+    y = maybe_cuda(y)
+
+
+
 
     if return_indices:
+
         return x, y, indices
     else:
         return x, y

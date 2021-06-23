@@ -4,7 +4,7 @@ from continuum.dataset_scripts.cifar10 import CIFAR10
 from continuum.dataset_scripts.core50 import CORE50
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
-from agents.exp_replay import ExperienceReplay
+from agents.exp_replay_new import ExperienceReplay
 from agents.agem import AGEM
 from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
@@ -14,6 +14,7 @@ from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
 #from utils.buffer.replay_times_update import Replay_times_update
 from utils.buffer.mir_retrieve import MIR_retrieve
+from utils.buffer.rl_retrieve import RL_retrieve
 from utils.buffer.gss_greedy_update import GSSGreedyUpdate
 from utils.buffer.aser_retrieve import ASER_retrieve
 from utils.buffer.aser_update import ASER_update
@@ -41,7 +42,8 @@ agents = {
 retrieve_methods = {
     'MIR': MIR_retrieve,
     'random': Random_retrieve,
-    'ASER': ASER_retrieve
+    'ASER': ASER_retrieve,
+    'RL':RL_retrieve
 }
 
 update_methods = {

@@ -49,7 +49,7 @@ if __name__ == "__main__":
                         help='Agent selection  (default: %(default)s)')
     parser.add_argument('--update', dest='update', default='random', choices=['random', 'GSS', 'ASER','rt','timestamp','rt2'],
                         help='Update method  (default: %(default)s)')
-    parser.add_argument('--retrieve', dest='retrieve', default='random', choices=['MIR', 'random', 'ASER'],
+    parser.add_argument('--retrieve', dest='retrieve', default='random', choices=['MIR', 'random', 'ASER','RL'],
                         help='Retrieve method  (default: %(default)s)')
 
     ########################Optimizer#########################
@@ -93,12 +93,15 @@ if __name__ == "__main__":
                         help='NI Non Stationary task composition (default: %(default)s)')
 
     ########################ER#########################
-    parser.add_argument('--mem_size', dest='mem_size', default=10000,
+    parser.add_argument('--mem_size', dest='mem_size', default=5000,
                         type=int,
                         help='Memory buffer size (default: %(default)s)')
+
     parser.add_argument('--eps_mem_batch', dest='eps_mem_batch', default=10,
                         type=int,
                         help='Episode memory per batch (default: %(default)s)')
+
+
 
     ########################EWC##########################
     parser.add_argument('--lambda', dest='lambda_', default=100, type=float,
@@ -171,10 +174,43 @@ if __name__ == "__main__":
                         help='If True, `min_delta` defines an increase since the last `patience` reset, '
                              'otherwise, it defines an increase after the last event.')
 
-    #### RL ##############
-    parser.add_argument('--use_tmp_buffer',dest='use_tmp_buffer',default=True,type=boolean_string,
+    ################### RL test buffer #####################
+    parser.add_argument('--test_mem_size', dest='test_mem_size', default=5000,
+                        type=int,
+                        help='Test Memory buffer size (default: %(default)s)')
+    parser.add_argument('--test_mem_batchSize', dest='test_mem_batchSize', default=50,
+                        type=int,
+                        help='Test Memory buffer batch size (default: %(default)s)')
+    parser.add_argument("--use_test_buffer",dest='use_test_buffer',default=False,type=boolean_string,
+                        help='If True, evaluate model on the test buffer during CL training')
+
+    parser.add_argument('--use_tmp_buffer',dest='use_tmp_buffer',default=False,type=boolean_string,
                         help='If True, use a tmp buffer to store the to-be-insert samples from new task/replace indices '
                              'and insert these into memory at the end of new task')
+
+    #################### RL dyan ####################
+    parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default=False,type=boolean_string,
+                        help='If True, adjust mem iter')
+
+    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=3, type=int,
+                        help='')
+
+    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
+                        help='')
+
+    ####################  RL basics ##############
+    parser.add_argument("--RL_type",dest='RL_type',default="1dim",type=str,choices=["1dim","2dim"],
+                        help='')
+    parser.add_argument('--action_size', dest='action_size', default=11,
+                        type=int,
+                        help='Action size (default: %(default)s)')
+
+    parser.add_argument("--reward_type",dest='reward_type',default="acc",type=str,choices=["acc","relative"],
+                        help='')
+
+    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["relative_reward","dyna12","dyna03","dyna13_old","dyna13_pos","dyna13","restartq","2range","full_range",'greedy_action','large_q',"positive","4range","8range","mem_iter10",
+                                                                                           "dynamic_memIter3","half_range","use_test_buffer","1k_test_buffer","negative"],
+                        help='')
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()

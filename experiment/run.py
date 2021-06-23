@@ -12,7 +12,56 @@ from utils.io import load_yaml, save_dataframe_csv, check_ram_usage
 import pandas as pd
 import os
 import pickle
+def get_prefix(params):
+    trick = ""
+    if (params.nmc_trick):
+        trick += "NMC_"
+    if (params.use_tmp_buffer):
+        trick += "tmpMem_"
+    if(params.dyna_mem_iter):
+        trick += "dynaMemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+    if (params.mem_iters > 1):
+        trick += "memIter" + str(params.mem_iters)+"_"
+    if (params.test_mem_batchSize > 10):
+        trick += "testbatch" + str(params.test_mem_batchSize)+"_"
+    if(params.retrieve == "RL"):
+        trick += params.RL_type+"_"
 
+    trick += params.reward_type+"_"
+
+    if (params.action_size > 0):
+        trick += str(params.action_size) +"_"
+    if (not params.save_prefix == ""):
+        trick += params.save_prefix+"_"
+    if( not params.eps_mem_batch == 10):
+        trick += "mem_batch"+str(params.eps_mem_batch)+"_"
+
+    # t = time.localtime()
+    # timestamp = time.strftime('%b-%d-%Y_%H%M', t)
+    folder_path = "results/" + str(params.seed)
+    if (not os.path.exists(folder_path)):
+        os.mkdir(folder_path)
+    prefix = folder_path + '/' + params.agent + "_" + params.retrieve + "_" + params.update + '_' + trick  + str(
+        params.num_tasks) + "_" + str(params.mem_size)+ "_"+params.data+"_"
+    print("save file name :"+ prefix)
+
+    return prefix
+
+def save_stats(params,agent,accuracy_list):
+    prefix = get_prefix(params)
+
+    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
+    np.save(prefix + "accuracy_list.npy", accuracy_list)
+
+    agent.save_training_acc(prefix)
+
+    if(params.agent== 'ER' or params.agent == "ICARL"):
+        agent.buffer.save_buffer_info(prefix)
+    if(params.retrieve == "RL" or params.use_test_buffer ):
+        print("save reward in run")
+        agent.RL_agent.save_q(prefix)
+        agent.RL_env.save_reward(prefix)
+        agent.RL_agent.save_action(prefix)
 
 def multiple_run(params):
     # Set up data stream
@@ -31,37 +80,29 @@ def multiple_run(params):
         opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
         agent = agents[params.agent](model, opt, params)
 
+
+
         # prepare val data loader
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            print("-----------run {} training batch {}-------------".format(run, i))
+            # if(i>0):break ## debug
+            if(params.retrieve == "RL" or params.use_test_buffer):
+                agent.RL_agent.initialize_q()
+            print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
             agent.train_learner(x_train, y_train)
             acc_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
+            if (params.retrieve == "RL" or params.use_test_buffer):
+                agent.RL_env.update_task_reward()
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
-
     accuracy_list = np.array(accuracy_list)
-    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
-    trick=""
-    if(params.nmc_trick):
-        trick += "NMC_"
-    if(params.use_tmp_buffer):
-        trick += "tmpMem_"
-    # t = time.localtime()
-    #timestamp = time.strftime('%b-%d-%Y_%H%M', t)
-    folder_path ="results/"+str(params.seed)
-    if(not os.path.exists(folder_path)):
-        os.mkdir(folder_path)
-    prefix = folder_path+'/'+params.agent + "_"+params.retrieve+ "_"+params.update+'_' +trick+ params.data+'_'+str(params.num_tasks)+"_"+str(params.mem_size)
-    np.save(prefix +"_accuracy_list.npy",accuracy_list)
-    if(params.agent== 'ER' or params.agent == "ICARL"):
-        agent.buffer.save_buffer_info(prefix)
+    save_stats(params, agent,  accuracy_list)
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()

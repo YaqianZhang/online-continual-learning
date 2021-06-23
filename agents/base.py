@@ -57,6 +57,8 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             self.model.train()
             mem_x = self.buffer.buffer_img[:self.buffer.current_index]
             mem_y = self.buffer.buffer_label[:self.buffer.current_index]
+            # mem_x = maybe_cuda(mem_x)
+            # mem_y = maybe_cuda(mem_y)
             # criterion = torch.nn.CrossEntropyLoss(reduction='mean')
             if mem_x.size(0) > 0:
                 rv_dataset = TensorDataset(mem_x, mem_y)
@@ -111,6 +113,8 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             cls_exemplar = {cls: [] for cls in self.old_labels}
             buffer_filled = self.buffer.current_index
             for x, y in zip(self.buffer.buffer_img[:buffer_filled], self.buffer.buffer_label[:buffer_filled]):
+                x = maybe_cuda(x)
+                y = maybe_cuda(y)
                 cls_exemplar[y.item()].append(x)
             for cls, exemplar in cls_exemplar.items():
                 features = []

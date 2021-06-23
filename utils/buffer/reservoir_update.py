@@ -1,6 +1,7 @@
 import torch
 
 
+
 class Reservoir_update(object):
     def __init__(self, params):
         super().__init__()
@@ -23,6 +24,8 @@ class Reservoir_update(object):
 
     def update(self, buffer, x, y,tmp_buffer=None, **kwargs):
         batch_size = x.size(0)
+        x = x.cpu()
+        y = y.cpu()
 
 
         # add whatever still fits in the buffer
@@ -43,11 +46,13 @@ class Reservoir_update(object):
         # remove what is already in the buffer
         x, y = x[place_left:], y[place_left:]
 
+
         indices = torch.FloatTensor(x.size(0)).to(x.device).uniform_(0, buffer.n_seen_so_far).long()
         valid_indices = (indices < buffer.buffer_img.size(0)).long()
 
         idx_new_data = valid_indices.nonzero().squeeze(-1)
         idx_buffer   = indices[idx_new_data]
+
         ## zyq: choose the samples with least replay times to be replaced
         if(buffer.params.update[:2] =="rt"):
             idx_buffer = self.choose_replace_indice(buffer,valid_indices)
@@ -85,9 +90,7 @@ class Reservoir_update(object):
 
         if (not buffer.params.use_tmp_buffer):
             buffer.overwrite(idx_map,x,y)
-
         else:
-
             tmp_buffer.tmp_store(x[idx_new_data],y[idx_new_data])
         return list(idx_map.keys())
 
