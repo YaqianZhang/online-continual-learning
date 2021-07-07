@@ -133,6 +133,8 @@ class RL_memIter_agent(RL_agent):
 
 
 
+
+
     def initialize_q(self):
 
         network = self.q_function
