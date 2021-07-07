@@ -1,0 +1,6 @@
+*.sh
+*.ipynb
+*__pycache__*
+results/
+datasets/
+*ipynb_checkpoints*

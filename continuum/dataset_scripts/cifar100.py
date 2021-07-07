@@ -1,6 +1,6 @@
 import numpy as np
 from torchvision import datasets
-from continuum.data_utils import create_task_composition, load_task_with_labels
+from continuum.data_utils import create_task_composition, load_task_with_labels,create_task_composition_order
 from continuum.dataset_scripts.dataset_base import DatasetBase
 from continuum.non_stationary import construct_ns_multiple_wrapper, test_ns
 
@@ -13,6 +13,7 @@ class CIFAR100(DatasetBase):
         else:
             num_tasks = params.num_tasks
         super(CIFAR100, self).__init__(dataset, scenario, num_tasks, params.num_runs, params)
+        self.task_labels=[]
 
 
     def download_load(self):
@@ -33,7 +34,9 @@ class CIFAR100(DatasetBase):
                                                                                         self.params.ns_type, self.params.ns_factor,
                                                                                         plot=self.params.plot_sample)
         elif self.scenario == 'nc':
-            self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)
+            #self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)
+            self.task_labels = create_task_composition_order(class_nums=100, num_tasks=self.task_nums,)
+
             self.test_set = []
             for labels in self.task_labels:
                 x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)

@@ -20,7 +20,7 @@ class Icarl(ContinualLearner):
         self.buffer = Buffer(model, params)
         self.prev_model = None
 
-    def train_learner(self, x_train, y_train):
+    def train_learner(self, x_train, y_train,labels=None):
         self.before_train(x_train, y_train)
         # set up loader
         train_dataset = dataset_transform(x_train, y_train, transform=transforms_match[self.data])
@@ -55,6 +55,7 @@ class Icarl(ContinualLearner):
                 else:
                     batch_x = train_x
                 logits = self.forward(batch_x)
+                print("!!output shape",logits.shape)
                 self.opt.zero_grad()
                 if self.prev_model is not None:
                     with torch.no_grad():

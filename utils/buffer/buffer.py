@@ -45,6 +45,14 @@ class Buffer(torch.nn.Module):
         self.buffer_replay_times[indices]+=1
         self.buffer_last_replay +=1
         self.buffer_last_replay[indices] =0
+    def reset(self):
+        buffer_size = self.params.mem_size
+        print('buffer has %d slots' % buffer_size)
+        input_size = input_size_match[self.params.data]
+        self.buffer_img = torch.FloatTensor(buffer_size, *input_size).fill_(0)
+        self.buffer_label = torch.LongTensor(buffer_size).fill_(0)
+        self.buffer_replay_times =maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
+        self.buffer_last_replay = maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
 
     def update(self, x, y,tmp_buffer=None):
         return self.update_method.update(buffer=self, x=x, y=y,tmp_buffer=tmp_buffer)

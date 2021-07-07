@@ -23,6 +23,8 @@ class RL_agent(object):
 
         self.current_action = torch.zeros(1).long().random_(0, self.action_num) ## todo:set initial current action to be MIR
         self.action_list= []
+        self.current_state = None
+        self.current_reward = None
     def save_q(self,prefix):
 
         arr = self.q_function.detach().cpu().numpy()
@@ -66,28 +68,7 @@ class RL_agent_2dim(RL_agent):
         self.action_len = maybe_cuda(torch.LongTensor(1).fill_(self.action_num))
 
 
-class RL_memIter_agent(RL_agent):
-    def __init__(self, params):
-        super().__init__()
-
-        self.action_num= 5 ## memITer
-        self.action_len = maybe_cuda(torch.LongTensor(1).fill_(self.action_num))
 
 
-        #self.q_function = maybe_cuda(torch.FloatTensor(self.action_num).fill_(1)) ## todo Q network
 
-        self.current_action = torch.zeros(1).long().random_(0, self.action_num) ## todo:set initial current action to be MIR
-        self.action_list= []
 
-    # def sample_action(self,state):
-    #     action = self.greedy_policy(state)
-    #     return action
-    #
-    # def greedy_policy(self,state):
-    #     rnd = torch.tensor(1).float().uniform_(0, 1 ).item()
-    #     if(rnd<self.epsilon): ## take random action
-    #         actions =torch.randint(0,high=self.action_len,size=self.selected_num)## unrepetitive
-    #     else: ## take greedy action
-    #         #q_values
-    #         actions = torch.sort(self.q_function)[1][:self.selected_num]
-    #     return actions

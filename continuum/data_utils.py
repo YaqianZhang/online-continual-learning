@@ -17,6 +17,21 @@ def create_task_composition(class_nums, num_tasks, fixed_order=False):
         print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
     return task_labels
 
+def create_task_composition_order(class_nums, num_tasks, ):
+    classes_per_task = class_nums // num_tasks
+    total_classes = classes_per_task * num_tasks
+
+    label = np.arange(0, total_classes)
+    task_org = np.arange(0, num_tasks)
+    np.random.shuffle(task_org)
+
+    task_labels = [label[task_org[i] * classes_per_task:task_org[i] * classes_per_task + classes_per_task] for i in range(num_tasks)]
+
+    for tt in range(num_tasks):
+        print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
+    print("task order:",task_org)
+    return task_labels
+
 
 def load_task_with_labels_torch(x, y, labels):
     tmp = []

@@ -2,7 +2,7 @@ import argparse
 import random
 import numpy as np
 import torch
-from experiment.run import multiple_run
+from experiment.run import multiple_run#,multiple_RL_run
 from utils.utils import boolean_string
 
 
@@ -19,6 +19,9 @@ def main(args):
     args.trick = {'labels_trick': args.labels_trick, 'separated_softmax': args.separated_softmax,
                   'kd_trick': args.kd_trick, 'kd_trick_star': args.kd_trick_star, 'review_trick': args.review_trick,
                   'nmc_trick': args.nmc_trick}
+    # if(args.num_runs>1):
+    #     multiple_RL_run(args)
+    # else:
     multiple_run(args)
 
 
@@ -178,7 +181,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_mem_size', dest='test_mem_size', default=5000,
                         type=int,
                         help='Test Memory buffer size (default: %(default)s)')
-    parser.add_argument('--test_mem_batchSize', dest='test_mem_batchSize', default=50,
+    parser.add_argument('--test_mem_batchSize', dest='test_mem_batchSize', default=100,
                         type=int,
                         help='Test Memory buffer batch size (default: %(default)s)')
     parser.add_argument("--use_test_buffer",dest='use_test_buffer',default=False,type=boolean_string,
@@ -189,7 +192,7 @@ if __name__ == "__main__":
                              'and insert these into memory at the end of new task')
 
     #################### RL dyan ####################
-    parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default=False,type=boolean_string,
+    parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","dyna","None"],
                         help='If True, adjust mem iter')
 
     parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=3, type=int,
@@ -198,21 +201,69 @@ if __name__ == "__main__":
     parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
                         help='')
 
+    parser.add_argument('--ratio', dest='ratio', default=1.0, type=float,
+                        help='incoming and mem gradient update ratio')
+    parser.add_argument("--dyna_ratio", dest='dyna_ratio', type=str, default="None", choices=['dyna','random','None'],
+                        help='adjust dyna_ratio')
+
     ####################  RL basics ##############
-    parser.add_argument("--RL_type",dest='RL_type',default="1dim",type=str,choices=["1dim","2dim"],
-                        help='')
+    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio","RL_memIter","1dim","2dim","NoRL","DormantRL","RL_ratioMemIter"],
+                        help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
+
     parser.add_argument('--action_size', dest='action_size', default=11,
                         type=int,
                         help='Action size (default: %(default)s)')
+    parser.add_argument("--critic_ER_type",dest='critic_ER_type',default='random',type=str,choices=["random","recent","recent2"])
 
-    parser.add_argument("--reward_type",dest='reward_type',default="acc",type=str,choices=["acc","relative"],
+    parser.add_argument("--ER_batch_size",dest="ER_batch_size",default=50,type=int,)
+    parser.add_argument('--critic_nlayer', dest='critic_nlayer', default= 2,
+                        type=int,
+                        help='critic network size (default: %(default)s)')
+    parser.add_argument('--critic_layer_size', dest='critic_layer_size', default= 32,
+                        type=int,
+                        help='critic network size (default: %(default)s)')
+    parser.add_argument('--critic_training_iters', dest='critic_training_iters', default= 1,
+                        type=int,
+                        help="")
+    parser.add_argument('--critic_recent_steps', dest='critic_recent_steps', default= 100,
+                        type=int,
+                        help="")
+
+    parser.add_argument('--test_retrieval_step', dest='test_retrieval_step', default= -1,
+                        type=int,
+                        help="")
+
+
+    parser.add_argument("--reward_type",dest='reward_type',default="test_acc",type=str,choices=["scaled","real_reward","incoming_acc","mem_acc","test_acc","relative","multi-step"],
                         help='')
 
-    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["relative_reward","dyna12","dyna03","dyna13_old","dyna13_pos","dyna13","restartq","2range","full_range",'greedy_action','large_q',"positive","4range","8range","mem_iter10",
+    parser.add_argument("--reward_test_type",dest='reward_test_type',default="None",type=str,choices=["reverse","relative","None"],
+                        help='')
+
+    parser.add_argument("--test_mem_type",dest='test_mem_type',default="after",type=str,choices=["before","after"],
+                        help='')
+
+    parser.add_argument("--state_type",dest='state_type',default="4_dim",type=str,choices=["same_batch_7_dim","same_batch","3_dim","4_dim","3_loss","4_loss","6_dim","7_dim"],
+                        help='')
+
+    # parser.add_argument("--same_batch",dest='same_batch',default=False,type=boolean_string,choices=["3_dim","4_dim","3_loss","4_loss","6_dim","7_dim"],
+    #                     help='')
+
+
+    parser.add_argument("--episode_type",dest='episode_type',default="task",type=str,choices=["task","batch"],
+                        help='')
+
+    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["replay_retrieve","mem_ratio","reverse","ratio02","iters5","sigmoidQ","slow_rl_lr","ceof2","ceof0.5","random_RL","action03","relative_reward","dyna12","dyna03","dyna13_old","dyna13_pos","dyna13","restartq","2range","full_range",'greedy_action','large_q',"positive","4range","8range","mem_iter10",
                                                                                            "dynamic_memIter3","half_range","use_test_buffer","1k_test_buffer","negative"],
                         help='')
 
+    parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
+                        type=int,
+                        help="")
+
+
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
-    torch.cuda.set_device(0)
+    torch.cuda.set_device(args.GPU_ID)
+
     main(args)

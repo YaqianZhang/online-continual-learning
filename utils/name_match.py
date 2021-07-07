@@ -4,7 +4,7 @@ from continuum.dataset_scripts.cifar10 import CIFAR10
 from continuum.dataset_scripts.core50 import CORE50
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
-from agents.exp_replay_new import ExperienceReplay
+from agents.exp_replay import ExperienceReplay
 from agents.agem import AGEM
 from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm

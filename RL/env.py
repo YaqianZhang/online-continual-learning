@@ -32,21 +32,21 @@ class RL_env(object):
             self.get_test_batch(test_buffer)
             self.compute_pre_test_loss(buffer)
 
-    def compute_reward(self,test_buffer):
-       # reward = None
-        if (self.params.reward_type == "relative"):
-            # if (self.RL_env.pre_loss_test == None):
-            #     pass
-            # else:
-            reward = torch.mean(self.reward_post_loss()).cpu()
+    # def compute_acc_test_buffer(self,test_buffer):
+    #    # reward = None
+    #     if (self.params.reward_type == "relative"):
+    #         # if (self.RL_env.pre_loss_test == None):
+    #         #     pass
+    #         # else:
+    #         reward = torch.mean(self.reward_post_loss()).cpu()
+    #
+    #     else:
+    #         reward = self.acc_test_buffer(test_buffer)
+    #     #if not (reward == None):
+    #     self.reward_list.append(reward)
+    #     return reward
 
-        else:
-            reward = self.step(test_buffer)
-        #if not (reward == None):
-        self.reward_list.append(reward)
-        return reward
-
-    def step(self,test_memory,):
+    def acc_test_buffer(self,test_memory,):
 
         if(test_memory.current_index==0):
             print("Test memory is empty")
@@ -60,6 +60,38 @@ class RL_env(object):
             correct_cnt = (pred_label == batch_y).sum().item() / batch_y.size(0)
 
         return correct_cnt
+
+    def get_reward(self,stats,evaluator,model,task_seen,correct_cnt_test_mem_prev):
+        #reward = next_state[0,1].numpy() # todo: RL q test
+        [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem] = stats
+        if(self.params.reward_type == "incoming_acc"):
+            reward = correct_cnt_incoming#next_state[0,0].numpy()
+        elif(self.params.reward_type == "mem_acc"):
+            reward = correct_cnt_mem#next_state[0, 1].numpy()
+        elif(self.params.reward_type == "test_acc"):
+
+            reward = correct_cnt_test_mem#next_state[0, 2].numpy()
+        elif(self.params.reward_type == "scaled"):
+            #return np.log(correct_cnt_test_mem+1)
+            reward = 100*correct_cnt_test_mem
+        elif(self.params.reward_type == "real_reward"):
+            reward =  100*evaluator.evaluate_model(model,task_seen)
+        elif(self.params.reward_type == "multi-step"):
+            reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
+        else:
+            raise NotImplementedError("not implemented reward error")
+
+        if (self.params.reward_test_type == "reverse"):
+            reward = -reward
+        elif (self.params.reward_test_type == "relative"):
+            reward = self.RL_env.get_reward(stats[:3])  # -correct_cnt_test_mem*100
+        elif (self.params.reward_test_type == "None"):
+            pass
+        else:
+            raise NotImplementedError("undefined reward test type ", self.params.reward_test_type)
+        return reward
+
+
 
 
 
@@ -162,6 +194,7 @@ class RL_env(object):
 
 
     def update_task_reward(self):
+        if(len(self.reward_list) == 0): return
         self.task_reward_list.append(self.reward_list[-1])
     def save_reward(self,prefix):
 
