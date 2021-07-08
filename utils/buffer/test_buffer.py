@@ -7,7 +7,7 @@ import numpy as np
 
 
 class Test_Buffer(torch.nn.Module):
-    def __init__(self,  params,RL_agent, RL_env):
+    def __init__(self,  params,):
         super().__init__()
         self.params = params
         #self.model = model
@@ -35,10 +35,10 @@ class Test_Buffer(torch.nn.Module):
         self.update_method = name_match.update_methods[params.update](params,)
         #self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
 
-        if(params.retrieve == "RL"):
-            self.retrieve_method = name_match.retrieve_methods[params.retrieve](params,RL_agent, RL_env)
-        else:
-            self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
+        # if(params.retrieve == "RL"):
+        #     self.retrieve_method = name_match.retrieve_methods[params.retrieve](params,RL_agent, RL_env)
+        # else:
+        self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
 
 
     def update(self, x, y,tmp_buffer=None):

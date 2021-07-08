@@ -1,15 +1,10 @@
-
-
-import torch
-import numpy as np
-from RL.RL_agent import RL_agent
-from utils.utils import maybe_cuda
-from RL.pytorch_util import  build_mlp
-from RL.RL_buffer import ExperienceReplay
-
 class RL_base_agent(object):
     def __init__(self, params):
-        pass
+        self.params = params
+
+        self.epsilon = 0.1
+        self.alpha = 0.9 # Q update parameters
+        self.selected_num = 1
 
 
     def sample_action(self, state):

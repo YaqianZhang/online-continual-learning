@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from experiment.run import multiple_run#,multiple_RL_run
 from utils.utils import boolean_string
-## this change is deleted
+
 
 def main(args):
     print(args)
@@ -191,7 +191,7 @@ if __name__ == "__main__":
                         help='If True, use a tmp buffer to store the to-be-insert samples from new task/replace indices '
                              'and insert these into memory at the end of new task')
 
-    #################### RL dyan ####################
+    #################### replay dynamics ####################
     parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","dyna","None"],
                         help='If True, adjust mem iter')
 
@@ -201,18 +201,44 @@ if __name__ == "__main__":
     parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
                         help='')
 
-    parser.add_argument('--ratio', dest='ratio', default=1.0, type=float,
+    parser.add_argument('--incoming_ratio', dest='incoming_ratio', default=1.0, type=float,
                         help='incoming and mem gradient update ratio')
     parser.add_argument("--dyna_ratio", dest='dyna_ratio', type=str, default="None", choices=['dyna','random','None'],
                         help='adjust dyna_ratio')
 
-    ####################  RL basics ##############
-    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio","RL_memIter","1dim","2dim","NoRL","DormantRL","RL_ratioMemIter"],
+    #################################### RL basics ####################################
+    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio","RL_memIter","NoRL","DormantRL","RL_ratioMemIter"],#"1dim","2dim",
                         help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
 
     parser.add_argument('--action_size', dest='action_size', default=11,
                         type=int,
                         help='Action size (default: %(default)s)')
+
+    parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
+                        choices=["scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc", "relative",
+                                 "multi-step"],
+                        help='')
+
+    parser.add_argument("--reward_test_type", dest='reward_test_type', default="None", type=str,
+                        choices=["reverse", "relative", "None"],
+                        help='')
+
+    parser.add_argument("--test_mem_type", dest='test_mem_type', default="after", type=str, choices=["before", "after"],
+                        help='')
+
+    parser.add_argument("--state_feature_type", dest='state_feature_type', default="6_dim", type=str,
+                        choices=["3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
+                                 "7_dim"],
+                        help='state feature ')
+
+    parser.add_argument("--dynamics_type",dest='dynamics_type',default="same_batch",type=str,
+                        choices=["same_batch","next_batch"],
+                        help='whether the reward and transition dynamics are computed for same incoming batch or not')
+
+    parser.add_argument("--episode_type", dest='episode_type', default="task", type=str, choices=["task", "batch"],
+                        help='')
+
+    #################################### critic training####################################
     parser.add_argument("--critic_ER_type",dest='critic_ER_type',default='random',type=str,choices=["random","recent","recent2"])
 
     parser.add_argument("--ER_batch_size",dest="ER_batch_size",default=50,type=int,)
@@ -228,30 +254,18 @@ if __name__ == "__main__":
     parser.add_argument('--critic_recent_steps', dest='critic_recent_steps', default= 100,
                         type=int,
                         help="")
+    
+    #################################### multiple buffer idea ####################################
 
     parser.add_argument('--test_retrieval_step', dest='test_retrieval_step', default= -1,
                         type=int,
                         help="")
 
+    parser.add_argument('--switch_buffer_type', dest='switch_buffer_type', default= "one_buffer",
+                        type=str,choices=["one_buffer","two_buffer"],
+                        help="whether and how to switch replay buffer")
 
-    parser.add_argument("--reward_type",dest='reward_type',default="test_acc",type=str,choices=["scaled","real_reward","incoming_acc","mem_acc","test_acc","relative","multi-step"],
-                        help='')
-
-    parser.add_argument("--reward_test_type",dest='reward_test_type',default="None",type=str,choices=["reverse","relative","None"],
-                        help='')
-
-    parser.add_argument("--test_mem_type",dest='test_mem_type',default="after",type=str,choices=["before","after"],
-                        help='')
-
-    parser.add_argument("--state_type",dest='state_type',default="4_dim",type=str,choices=["same_batch_7_dim","same_batch","3_dim","4_dim","3_loss","4_loss","6_dim","7_dim"],
-                        help='')
-
-    # parser.add_argument("--same_batch",dest='same_batch',default=False,type=boolean_string,choices=["3_dim","4_dim","3_loss","4_loss","6_dim","7_dim"],
-    #                     help='')
-
-
-    parser.add_argument("--episode_type",dest='episode_type',default="task",type=str,choices=["task","batch"],
-                        help='')
+    #################################################
 
     parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["replay_retrieve","mem_ratio","reverse","ratio02","iters5","sigmoidQ","slow_rl_lr","ceof2","ceof0.5","random_RL","action03","relative_reward","dyna12","dyna03","dyna13_old","dyna13_pos","dyna13","restartq","2range","full_range",'greedy_action','large_q',"positive","4range","8range","mem_iter10",
                                                                                            "dynamic_memIter3","half_range","use_test_buffer","1k_test_buffer","negative"],

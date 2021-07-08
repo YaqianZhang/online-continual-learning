@@ -7,10 +7,7 @@ import numpy as np
 class RL_agent(object):
     def __init__(self, params):
         super().__init__()
-        self.params = params
-        self.epsilon = 0.1
-        self.alpha = 0.9 # Q update parameters
-        self.selected_num = 1
+
 
 
 
@@ -22,20 +19,20 @@ class RL_agent(object):
         self.q_function = maybe_cuda(torch.FloatTensor(self.action_num).fill_(1))
 
         self.current_action = torch.zeros(1).long().random_(0, self.action_num) ## todo:set initial current action to be MIR
-        self.action_list= []
-        self.current_state = None
-        self.current_reward = None
-    def save_q(self,prefix):
+        self.real_action_list= []
+
+    def save_RL_stats(self,prefix):
 
         arr = self.q_function.detach().cpu().numpy()
 
         np.save(prefix + "q_function.npy", arr)
         #np.save(prefix+"last_action.npy",self.current_action.detach().cpu().numpy())
-
-    def save_action(self,prefix):
-        arr = np.array(self.action_list)
-        np.save(prefix + "action_list.npy", arr)
+        arr = np.array(self.real_action_list)
+        np.save(prefix + "real_action_list.npy", arr)
         print("save action")
+
+
+
 
 
     def sample_action(self):
@@ -47,7 +44,7 @@ class RL_agent(object):
             #q_values
             action = torch.sort(self.q_function,descending=True)[1][:self.selected_num] ## select action with largest Q values
         self.current_action = action
-        self.action_list.append(action.cpu())
+        self.real_action_list.append(action.cpu())
         return action
 
 

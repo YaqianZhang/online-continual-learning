@@ -23,63 +23,69 @@ def get_prefix(params):
         trick += "tmpMem_"
     if(params.dyna_mem_iter != "None"):
         if(params.dyna_mem_iter == "dyna"):
-            trick += "dynaMemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+            trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
         else:
-            trick += "dynaMemIter_"+params.dyna_mem_iter
+            trick += "dMIter_"+params.dyna_mem_iter
     if (params.mem_iters > 1):
-        trick += "memIter" + str(params.mem_iters)+"_"
+        trick += "mIter" + str(params.mem_iters)+"_"
+    if (params.incoming_ratio != 1):
+        trick += "ratio" + str(params.mem_iters)+"_"
     if(params.dyna_ratio != "None"):
-        trick +="dyna_ratio"+params.dyna_ratio+"_"
-    trick += "ratio" + str(params.ratio) + "_"
-    if (params.test_mem_batchSize > 10):
-        trick += "testbatch" + str(params.test_mem_batchSize)+"_"
-    if(params.RL_type == "RL_memIter"):
-        trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-    else:
-    #if(params.retrieve == "RL"):
-        trick += params.RL_type + "_"
-    trick += params.reward_type+"_" ## todo: fix RL_type logic
-    trick += params.state_type+"_"
+        trick +="dyRatio"+params.dyna_ratio+"_"
+
+    if(params.switch_buffer_type != "one_buffer"):
+        if(params.switch_buffer_type == "two_buffer"):
+            trick += "2Buff"+"_"
+        else:
+            raise NotImplementedError("undefined switch buffer")
 
 
 
-    trick += params.critic_ER_type+"_"
-    if(params.episode_type == "batch"):
-        trick += params.episode_type +"_"
-    if(params.test_mem_type == "before"):
-        trick += params.test_mem_type +"_"
-    if(params.RL_type != 'NoRL'):
-        trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
-        trick += "ERbatch"+str(params.ER_batch_size)+"_"
-        if(params.critic_training_iters != 1):
-            trick += "criticIter" + str(params.critic_training_iters) + "_"
-        if(params.critic_recent_steps != 100):
-            trick += "crticRecent"+str(params.critic_recent_steps)+"_"
+    ### Rl related
+    if (params.RL_type != 'NoRL'):
 
+        if (params.test_mem_batchSize > 10):
+            trick += "testBch" + str(params.test_mem_batchSize)+"_"
+        if(params.RL_type == "RL_memIter"):
+            trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+        else:
+        #if(params.retrieve == "RL"):
+            trick += params.RL_type + "_"
+        trick += params.reward_type+"_" ## todo: fix RL_type logic
+        trick += params.state_feature_type+"_"
 
+        trick += params.critic_ER_type+"_"
+        if(params.episode_type == "batch"):
+            trick += params.episode_type +"_"
+        if(params.test_mem_type == "before"):
+            trick += params.test_mem_type +"_"
 
+            trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
+            trick += "ERbch"+str(params.ER_batch_size)+"_"
+            if(params.critic_training_iters != 1):
+                trick += "criticIter" + str(params.critic_training_iters) + "_"
+            if(params.critic_recent_steps != 100):
+                trick += "criticRct"+str(params.critic_recent_steps)+"_"
 
+        if(params.reward_test_type != "None"):
+            trick += params.reward_test_type + "_"
 
-    if (params.action_size > 0):
-        trick += str(params.action_size) +"_"
-    if(params.reward_test_type != "None"):
-        trick += params.reward_test_type + "_"
     if (not params.save_prefix == ""):
         trick += params.save_prefix+"_"
     if( not params.eps_mem_batch == 10):
-        trick += "mem_batch"+str(params.eps_mem_batch)+"_"
+        trick += "memBch"+str(params.eps_mem_batch)+"_"
+    if(params.num_runs>1):
+        trick += "numRuns"+str(params.num_runs) + "_"
 
-    trick += "numRuns"+str(params.num_runs) + "_"
-
-    if(params.test_retrieval_step != 100):
-        trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
+    # if(params.test_retrieval_step != 100):
+    #     trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
 
     # t = time.localtime()
     # timestamp = time.strftime('%b-%d-%Y_%H%M', t)
     folder_path = "results/" + str(params.seed)
     if (not os.path.exists(folder_path)):
         os.mkdir(folder_path)
-    prefix = folder_path + '/' + params.agent + "_" + params.retrieve + "_" + params.update + '_' + trick  + str(
+    prefix = folder_path + '/' + params.agent + "_" + params.retrieve[:3] + "_" + params.update[:3] + '_' + trick  + str(
         params.num_tasks) + "_" + str(params.mem_size)+ "_"+params.data+"_"
     print("save file name :"+ prefix)
 
@@ -93,19 +99,18 @@ def save_stats(params,agent,model,accuracy_list):
     print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
 
-    agent.save_training_acc(prefix)
+    agent.save_training_acc(prefix) # training_accuracy
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
-    if( params.use_test_buffer or params.RL_type != "NoRL" ):
+    if( params.RL_type != "NoRL" ):
         print("save reward in run")
-        agent.RL_agent.save_q(prefix)
-        agent.RL_env.save_reward(prefix)
-        agent.RL_agent.save_action(prefix)
+        agent.RL_agent.save_RL_stats(prefix) # q, reward, action
 
+        agent.RL_env.save_task_reward(prefix)
 
+    agent.save_mem_iters(prefix) ## memiter raio
 
-    agent.save_mem_iters(prefix)
 def reset_model(model):
     for layer in model.children():
         if hasattr(layer, 'reset_parameters'):
@@ -150,7 +155,7 @@ def multiple_run(params):
 
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            # if(i>0):break ## debug
+            #
 
             print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
