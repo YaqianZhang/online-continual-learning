@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
-    torch.cuda.set_device(1)#args.GPU_ID
+    torch.cuda.set_device(0)#args.GPU_ID
     print("device 1")
 
     main(args)

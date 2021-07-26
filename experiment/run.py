@@ -15,7 +15,7 @@ import pickle
 from RL.evaluator import evaluator
 
 
-def get_prefix(params):
+def get_prefix(params,run):
     trick = ""
     if (params.nmc_trick):
         trick += "NMC_"
@@ -23,95 +23,126 @@ def get_prefix(params):
         trick += "tmpMem_"
     if(params.dyna_mem_iter != "None"):
         if(params.dyna_mem_iter == "dyna"):
-            trick += "dynaMemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+            trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
         else:
-            trick += "dynaMemIter_"+params.dyna_mem_iter
+            trick += "dMIter_"+params.dyna_mem_iter
     if (params.mem_iters > 1):
-        trick += "memIter" + str(params.mem_iters)+"_"
+        trick += "mIter" + str(params.mem_iters)+"_"
+    if (params.incoming_ratio != 1):
+        trick += "iratio" + str(params.incoming_ratio)+"_"
+    if (params.mem_ratio != 1):
+        trick += "mratio" + str(params.mem_ratio)+"_"
     if(params.dyna_ratio != "None"):
-        trick +="dyna_ratio"+params.dyna_ratio+"_"
-    trick += "ratio" + str(params.ratio) + "_"
-    if (params.test_mem_batchSize > 10):
-        trick += "testbatch" + str(params.test_mem_batchSize)+"_"
-    if(params.RL_type == "RL_memIter"):
-        trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-    else:
-    #if(params.retrieve == "RL"):
-        trick += params.RL_type + "_"
-    trick += params.reward_type+"_" ## todo: fix RL_type logic
-    trick += params.state_type+"_"
+        trick +="dyRatio"+params.dyna_ratio+"_"
+
+    if(params.switch_buffer_type != "one_buffer"):
+        if(params.switch_buffer_type == "two_buffer"):
+            trick += "2Buff"+"_"
+        elif(params.switch_buffer_type == "dyna_buffer"):
+            trick += "dBuff"+str(params.switch_buffer_freq)+"_"
+
+        else:
+            raise NotImplementedError("undefined switch buffer")
 
 
 
-    trick += params.critic_ER_type+"_"
-    if(params.episode_type == "batch"):
-        trick += params.episode_type +"_"
-    if(params.test_mem_type == "before"):
-        trick += params.test_mem_type +"_"
-    if(params.RL_type != 'NoRL'):
-        trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
-        trick += "ERbatch"+str(params.ER_batch_size)+"_"
-        if(params.critic_training_iters != 1):
-            trick += "criticIter" + str(params.critic_training_iters) + "_"
-        if(params.critic_recent_steps != 100):
-            trick += "crticRecent"+str(params.critic_recent_steps)+"_"
+    ### Rl related
+    if (params.RL_type != 'NoRL'):
+
+        if (params.test_mem_batchSize > 10):
+            trick += "testBch" + str(params.test_mem_batchSize)+"_"
+        if(params.RL_type == "RL_memIter"):
+            trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+        if(params.RL_type == "RL_2ratioMemIter"):
+            trick += "RL2rmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+        else:
+        #if(params.retrieve == "RL"):
+            trick += params.RL_type + "_"
+        trick += params.reward_type+"_" ## todo: fix RL_type logic
+        trick += str(params.reward_rg)+"_"
+        trick += params.state_feature_type+"_"
+        if(params.critic_use_model):
+            trick += "Qmodel"+"_"
+
+        trick += params.critic_ER_type+"_"
+        if(params.episode_type == "batch"):
+            trick += params.episode_type +"_"
+        if(params.test_mem_type == "before"):
+            trick += params.test_mem_type +"_"
+
+        ##critic_training
+
+        # trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
+        # trick += "ERbch"+str(params.ER_batch_size)+"_"
+        # trick += "Done"+str(params.done_freq)+"_"
+        # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
+        # if(params.critic_training_iters != 1):
+        #     trick += "criticIter" + str(params.critic_training_iters) + "_"
+        # if(params.critic_recent_steps != 100):
+        #     trick += "criticRct"+str(params.critic_recent_steps)+"_"
+
+        if(params.reward_test_type != "None"):
+            trick += params.reward_test_type + "_"
+
+    if(params.test == "not_reset"):
+        trick += "no_reset"
 
 
 
 
 
-    if (params.action_size > 0):
-        trick += str(params.action_size) +"_"
-    if(params.reward_test_type != "None"):
-        trick += params.reward_test_type + "_"
     if (not params.save_prefix == ""):
         trick += params.save_prefix+"_"
     if( not params.eps_mem_batch == 10):
-        trick += "mem_batch"+str(params.eps_mem_batch)+"_"
+        trick += "memBch"+str(params.eps_mem_batch)+"_"
+    if(params.num_runs>1):
+        trick += "numRuns"+str(params.num_runs) + "_"
 
-    trick += "numRuns"+str(params.num_runs) + "_"
 
-    if(params.test_retrieval_step != 100):
-        trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
+    if(params.dataset_random_type == "order_random"):
+        trick += "orderRnd"+"_"
+    trick += params.cl_type+"_"
+
+    # if(params.test_retrieval_step != 100):
+    #     trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
 
     # t = time.localtime()
     # timestamp = time.strftime('%b-%d-%Y_%H%M', t)
-    folder_path = "results/" + str(params.seed)
+    folder_path = "results_new_branch/" + str(params.seed)
     if (not os.path.exists(folder_path)):
         os.mkdir(folder_path)
-    prefix = folder_path + '/' + params.agent + "_" + params.retrieve + "_" + params.update + '_' + trick  + str(
+    prefix = folder_path + '/' + params.agent +str(params.epoch)+ "_" + params.retrieve[:3] + "_" + params.update[:3] + '_' + trick  + str(
         params.num_tasks) + "_" + str(params.mem_size)+ "_"+params.data+"_"
     print("save file name :"+ prefix)
 
     return prefix
 
-def save_stats(params,agent,model,accuracy_list):
-    prefix = get_prefix(params)
+def save_stats(params,agent,model,accuracy_list,run=1):
+    prefix = get_prefix(params,run)
 
 
 
     print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
 
-    agent.save_training_acc(prefix)
+    agent.save_training_acc(prefix) # training_accuracy
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
-    if( params.use_test_buffer or params.RL_type != "NoRL" ):
+    if( params.RL_type != "NoRL" ):
         print("save reward in run")
-        agent.RL_agent.save_q(prefix)
-        agent.RL_env.save_reward(prefix)
-        agent.RL_agent.save_action(prefix)
+        agent.RL_agent.save_RL_stats(prefix) # q, reward, action
 
+        agent.RL_env.save_task_reward(prefix)
 
+    agent.save_mem_iters(prefix) ## memiter raio
 
-    agent.save_mem_iters(prefix)
 def reset_model(model):
     for layer in model.children():
         if hasattr(layer, 'reset_parameters'):
             layer.reset_parameters()
-def save_task_info(params,data_continuum):
-    prefix = get_prefix(params)
+def save_task_info(params,data_continuum,run):
+    prefix = get_prefix(params,run)
     task_label = np.array(data_continuum.data_object.task_labels)
     np.save(prefix + "task_label.npy", task_label)
 
@@ -138,9 +169,10 @@ def multiple_run(params):
 
 
 
+
         # prepare val data loader
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
-        save_task_info(params,data_continuum)
+        save_task_info(params,data_continuum,run)
 
         if(params.reward_type == "real_reward"):
             agent.evaluator = evaluator(test_loaders)
@@ -150,7 +182,7 @@ def multiple_run(params):
 
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            # if(i>0):break ## debug
+            #
 
             print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
@@ -167,6 +199,85 @@ def multiple_run(params):
         accuracy_list.append(np.array(tmp_acc))
     accuracy_list = np.array(accuracy_list)
     save_stats(params, agent, model,accuracy_list)
+
+    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
+    end = time.time()
+    print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
+    print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {} Avg_Bwtp {} Avg_Fwt {}-----------'
+          .format(avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt))
+
+def init_all(model, init_func, *params, **kwargs):
+    for p in model.parameters():
+        init_func(p, *params, **kwargs)
+
+
+def multiple_RLtrainig_run(params):
+    # Set up data stream
+    start = time.time()
+    print('Setting up data stream')
+    data_continuum = continuum(params.data, params.cl_type, params)
+
+
+    data_end = time.time()
+    print('data setup time: {}'.format(data_end - start))
+    accuracy_list = []
+    model = setup_architecture(params)
+    model = maybe_cuda(model, params.cuda)
+    opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
+    agent = agents[params.agent](model, opt, params)
+    for run in range(params.num_runs):
+        tmp_acc = []
+        run_start = time.time()
+        data_continuum.new_run()
+        # initailize agent model
+        #del agent.model
+        # agent.model = setup_architecture(params)
+        # agent.model = maybe_cuda(agent.model, params.cuda)
+        # agent.opt  = setup_opt(params.optimizer, agent.model, params.learning_rate, params.weight_decay)
+        #
+        # agent.RL_env.model = agent.model
+        # agent.buffer.model = agent.model
+        agent.initialize_agent(params)
+        agent.task_seen =0
+        if (params.RL_type != "NoRL"):
+            agent.RL_env.initialize()
+        #print("buffer index",agent.buffer.current_index,agent.RL_env.test_buffer.current_index)
+
+
+
+        # prepare val data loader
+        test_loaders = setup_test_loader(data_continuum.test_data(), params)
+        save_task_info(params,data_continuum,0)
+
+
+
+        if(params.reward_type == "real_reward"):
+            agent.evaluator = evaluator(test_loaders)
+        else:
+            agent.evaluator = None
+
+        for i, (x_train, y_train, labels) in enumerate(data_continuum):
+
+
+            print("-----------run {} training task {}-------------".format(run, i))
+            print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
+
+            agent.train_learner(x_train, y_train,labels)
+            acc_array = agent.evaluate(test_loaders)
+            tmp_acc.append(acc_array)
+            if (params.RL_type != "NoRL"):
+                agent.RL_env.update_task_reward()
+        run_end = time.time()
+        print(
+            "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
+                                                                           run_end - run_start))
+        accuracy_list.append(np.array(tmp_acc))
+        if(run%3==0):
+            accuracy_list_arr = np.array(accuracy_list)
+            save_stats(params, agent, model, accuracy_list_arr,run)
+
+    accuracy_list = np.array(accuracy_list)
+    save_stats(params, agent, model,accuracy_list,run)
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()
