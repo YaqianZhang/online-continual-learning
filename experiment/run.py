@@ -15,7 +15,7 @@ import pickle
 from RL.evaluator import evaluator
 
 
-def get_prefix(params):
+def get_prefix(params,run):
     trick = ""
     if (params.nmc_trick):
         trick += "NMC_"
@@ -29,13 +29,18 @@ def get_prefix(params):
     if (params.mem_iters > 1):
         trick += "mIter" + str(params.mem_iters)+"_"
     if (params.incoming_ratio != 1):
-        trick += "ratio" + str(params.mem_iters)+"_"
+        trick += "iratio" + str(params.incoming_ratio)+"_"
+    if (params.mem_ratio != 1):
+        trick += "mratio" + str(params.mem_ratio)+"_"
     if(params.dyna_ratio != "None"):
         trick +="dyRatio"+params.dyna_ratio+"_"
 
     if(params.switch_buffer_type != "one_buffer"):
         if(params.switch_buffer_type == "two_buffer"):
             trick += "2Buff"+"_"
+        elif(params.switch_buffer_type == "dyna_buffer"):
+            trick += "dBuff"+str(params.switch_buffer_freq)+"_"
+
         else:
             raise NotImplementedError("undefined switch buffer")
 
@@ -48,11 +53,16 @@ def get_prefix(params):
             trick += "testBch" + str(params.test_mem_batchSize)+"_"
         if(params.RL_type == "RL_memIter"):
             trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+        if(params.RL_type == "RL_2ratioMemIter"):
+            trick += "RL2rmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
         else:
         #if(params.retrieve == "RL"):
             trick += params.RL_type + "_"
         trick += params.reward_type+"_" ## todo: fix RL_type logic
+        trick += str(params.reward_rg)+"_"
         trick += params.state_feature_type+"_"
+        if(params.critic_use_model):
+            trick += "Qmodel"+"_"
 
         trick += params.critic_ER_type+"_"
         if(params.episode_type == "batch"):
@@ -60,15 +70,26 @@ def get_prefix(params):
         if(params.test_mem_type == "before"):
             trick += params.test_mem_type +"_"
 
-            trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
-            trick += "ERbch"+str(params.ER_batch_size)+"_"
-            if(params.critic_training_iters != 1):
-                trick += "criticIter" + str(params.critic_training_iters) + "_"
-            if(params.critic_recent_steps != 100):
-                trick += "criticRct"+str(params.critic_recent_steps)+"_"
+        ##critic_training
+
+        # trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
+        # trick += "ERbch"+str(params.ER_batch_size)+"_"
+        # trick += "Done"+str(params.done_freq)+"_"
+        # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
+        # if(params.critic_training_iters != 1):
+        #     trick += "criticIter" + str(params.critic_training_iters) + "_"
+        # if(params.critic_recent_steps != 100):
+        #     trick += "criticRct"+str(params.critic_recent_steps)+"_"
 
         if(params.reward_test_type != "None"):
             trick += params.reward_test_type + "_"
+
+    if(params.test == "not_reset"):
+        trick += "no_reset"
+
+
+
+
 
     if (not params.save_prefix == ""):
         trick += params.save_prefix+"_"
@@ -76,6 +97,11 @@ def get_prefix(params):
         trick += "memBch"+str(params.eps_mem_batch)+"_"
     if(params.num_runs>1):
         trick += "numRuns"+str(params.num_runs) + "_"
+
+
+    if(params.dataset_random_type == "order_random"):
+        trick += "orderRnd"+"_"
+    trick += params.cl_type+"_"
 
     # if(params.test_retrieval_step != 100):
     #     trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
@@ -85,14 +111,14 @@ def get_prefix(params):
     folder_path = "results/" + str(params.seed)
     if (not os.path.exists(folder_path)):
         os.mkdir(folder_path)
-    prefix = folder_path + '/' + params.agent + "_" + params.retrieve[:3] + "_" + params.update[:3] + '_' + trick  + str(
+    prefix = folder_path + '/' + params.agent +str(params.epoch)+ "_" + params.retrieve[:3] + "_" + params.update[:3] + '_' + trick  + str(
         params.num_tasks) + "_" + str(params.mem_size)+ "_"+params.data+"_"
     print("save file name :"+ prefix)
 
     return prefix
 
-def save_stats(params,agent,model,accuracy_list):
-    prefix = get_prefix(params)
+def save_stats(params,agent,model,accuracy_list,run=1):
+    prefix = get_prefix(params,run)
 
 
 
@@ -115,8 +141,8 @@ def reset_model(model):
     for layer in model.children():
         if hasattr(layer, 'reset_parameters'):
             layer.reset_parameters()
-def save_task_info(params,data_continuum):
-    prefix = get_prefix(params)
+def save_task_info(params,data_continuum,run):
+    prefix = get_prefix(params,run)
     task_label = np.array(data_continuum.data_object.task_labels)
     np.save(prefix + "task_label.npy", task_label)
 
@@ -143,9 +169,10 @@ def multiple_run(params):
 
 
 
+
         # prepare val data loader
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
-        save_task_info(params,data_continuum)
+        save_task_info(params,data_continuum,run)
 
         if(params.reward_type == "real_reward"):
             agent.evaluator = evaluator(test_loaders)
@@ -172,6 +199,85 @@ def multiple_run(params):
         accuracy_list.append(np.array(tmp_acc))
     accuracy_list = np.array(accuracy_list)
     save_stats(params, agent, model,accuracy_list)
+
+    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
+    end = time.time()
+    print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
+    print('----------- Avg_End_Acc {} Avg_End_Fgt {} Avg_Acc {} Avg_Bwtp {} Avg_Fwt {}-----------'
+          .format(avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt))
+
+def init_all(model, init_func, *params, **kwargs):
+    for p in model.parameters():
+        init_func(p, *params, **kwargs)
+
+
+def multiple_RLtrainig_run(params):
+    # Set up data stream
+    start = time.time()
+    print('Setting up data stream')
+    data_continuum = continuum(params.data, params.cl_type, params)
+
+
+    data_end = time.time()
+    print('data setup time: {}'.format(data_end - start))
+    accuracy_list = []
+    model = setup_architecture(params)
+    model = maybe_cuda(model, params.cuda)
+    opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
+    agent = agents[params.agent](model, opt, params)
+    for run in range(params.num_runs):
+        tmp_acc = []
+        run_start = time.time()
+        data_continuum.new_run()
+        # initailize agent model
+        #del agent.model
+        # agent.model = setup_architecture(params)
+        # agent.model = maybe_cuda(agent.model, params.cuda)
+        # agent.opt  = setup_opt(params.optimizer, agent.model, params.learning_rate, params.weight_decay)
+        #
+        # agent.RL_env.model = agent.model
+        # agent.buffer.model = agent.model
+        agent.initialize_agent(params)
+        agent.task_seen =0
+        if (params.RL_type != "NoRL"):
+            agent.RL_env.initialize()
+        #print("buffer index",agent.buffer.current_index,agent.RL_env.test_buffer.current_index)
+
+
+
+        # prepare val data loader
+        test_loaders = setup_test_loader(data_continuum.test_data(), params)
+        save_task_info(params,data_continuum,0)
+
+
+
+        if(params.reward_type == "real_reward"):
+            agent.evaluator = evaluator(test_loaders)
+        else:
+            agent.evaluator = None
+
+        for i, (x_train, y_train, labels) in enumerate(data_continuum):
+
+
+            print("-----------run {} training task {}-------------".format(run, i))
+            print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
+
+            agent.train_learner(x_train, y_train,labels)
+            acc_array = agent.evaluate(test_loaders)
+            tmp_acc.append(acc_array)
+            if (params.RL_type != "NoRL"):
+                agent.RL_env.update_task_reward()
+        run_end = time.time()
+        print(
+            "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
+                                                                           run_end - run_start))
+        accuracy_list.append(np.array(tmp_acc))
+        if(run%3==0):
+            accuracy_list_arr = np.array(accuracy_list)
+            save_stats(params, agent, model, accuracy_list_arr,run)
+
+    accuracy_list = np.array(accuracy_list)
+    save_stats(params, agent, model,accuracy_list,run)
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()

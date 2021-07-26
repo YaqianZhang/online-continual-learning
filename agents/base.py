@@ -24,6 +24,9 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         self.epoch = params.epoch
         self.batch = params.batch
         self.verbose = params.verbose
+        self.initialize()
+    def initialize(self):
+        print("base agent initialize")
         self.old_labels = []
         self.new_labels = []
         self.task_seen = 0

@@ -22,20 +22,36 @@ class Base_RL_env(object):
 
 
 
-    def get_reward(self,next_stats,prev_stats):
+    def get_reward(self,next_stats,prev_stats,i,action, action_mem_iter, action_incoming_ratio,action_mem_ratio):
+
 
         #reward = next_state[0,1].numpy() # todo: RL q test
         correct_cnt_test_mem_prev = prev_stats["correct_cnt_test_mem"]
         [correct_cnt_incoming, correct_cnt_mem,correct_cnt_test_mem,] = [
             next_stats['correct_cnt_incoming'],next_stats['correct_cnt_mem'], next_stats['correct_cnt_test_mem'],]
 
+        if(i==0):
+            self.episode_start_test_acc = 100*correct_cnt_test_mem
+            self.episode_start_test_loss = 100 * next_stats['loss_test_value']
+            print("### i = 0 episode start",self.episode_start_test_acc)
+
         if(self.params.reward_type == "incoming_acc"):
             reward = correct_cnt_incoming#next_state[0,0].numpy()
         elif(self.params.reward_type == "mem_acc"):
             reward = correct_cnt_mem#next_state[0, 1].numpy()
         elif(self.params.reward_type == "test_acc"):
+            reward = correct_cnt_test_mem
+        elif (self.params.reward_type == "test_acc_rlt"):
+            reward = (correct_cnt_test_mem - correct_cnt_test_mem_prev)
+        elif(self.params.reward_type == "test_loss"):
+            reward = -next_stats['loss_test_value']
+        elif(self.params.reward_type == "test_loss_rlt"):
+            reward = prev_stats['loss_test_value']-next_stats['loss_test_value']
 
-            reward = correct_cnt_test_mem#next_state[0, 2].numpy()
+        elif(self.params.reward_type == "acc_diff"):
+            reward = - np.abs(next_stats['correct_cnt_mem']-next_stats['correct_cnt_test_mem']) \
+                     - np.abs(next_stats['correct_cnt_mem'] - next_stats['correct_cnt_incoming'])
+
         elif(self.params.reward_type == "scaled"):
             #return np.log(correct_cnt_test_mem+1)
             reward = 100*correct_cnt_test_mem
@@ -43,17 +59,43 @@ class Base_RL_env(object):
             reward =  100*self.CL_agent.evaluator.evaluate_model(self.model,self.CL_agent.task_seen)
         elif(self.params.reward_type == "multi-step"):
             reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
+        elif(self.params.reward_type == "multi-step-0"):
+            if((i+1) %self.params.done_freq==0):
+
+                reward =  100*(correct_cnt_test_mem)
+            else:
+                reward = 0
+        elif(self.params.reward_type == "multi-step-0-rlt"):
+            if((i+1) %self.params.done_freq==0):
+
+                reward =  100*(correct_cnt_test_mem)-self.episode_start_test_acc
+                self.episode_start_test_acc = 100 * correct_cnt_test_mem
+                print("___________________________________")
+                print("### ",str(i)," episode start", self.episode_start_test_acc)
+            else:
+                reward = 0
+        elif(self.params.reward_type == "multi-step-0-rlt-loss"):
+            if((i+1) %self.params.done_freq==0):
+
+                reward =  100*(next_stats['loss_test_value'])-self.episode_start_test_loss
+
+                self.episode_start_test_loss = 100 * next_stats['loss_test_value']
+                print("___________________________________")
+                print("### ",str(i)," episode start", self.episode_start_test_loss)
+            else:
+                reward = 0
         else:
             raise NotImplementedError("not implemented reward error")
 
         if (self.params.reward_test_type == "reverse"):
             reward = -reward
-        elif (self.params.reward_test_type == "relative"):
-            reward = self.get_reward(next_stats[:3])  # -correct_cnt_test_mem*100
+        # elif (self.params.reward_test_type == "relative"):
+        #     reward = self.get_reward(next_stats[:3])  # -correct_cnt_test_mem*100
         elif (self.params.reward_test_type == "None"):
             pass
         else:
             raise NotImplementedError("undefined reward test type ", self.params.reward_test_type)
+        reward = reward - self.params.reward_rg * np.abs(next_stats['loss_mem_value']-next_stats['loss_test_value'])#action_mem_iter
         return reward
 
     def update_task_reward(self):
