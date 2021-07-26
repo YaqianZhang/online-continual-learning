@@ -15,6 +15,7 @@ class Buffer(torch.nn.Module):
         self.current_index = 0
         self.n_seen_so_far = 0
         self.task_seen_so_far = 0
+        self.training_steps = 0
 
 
         # define buffer
@@ -53,8 +54,14 @@ class Buffer(torch.nn.Module):
         self.buffer_label = torch.LongTensor(buffer_size).fill_(0)
         self.buffer_replay_times =maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
         self.buffer_last_replay = maybe_cuda(torch.LongTensor(buffer_size).fill_(0))
+        self.current_index = 0
+        self.n_seen_so_far = 0
+        self.task_seen_so_far = 0
+        self.training_steps = 0
+
 
     def update(self, x, y,tmp_buffer=None):
+        self.training_steps += 1
         return self.update_method.update(buffer=self, x=x, y=y,tmp_buffer=tmp_buffer)
 
     def retrieve(self, **kwargs):

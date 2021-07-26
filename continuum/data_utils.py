@@ -3,10 +3,10 @@ import torch
 from torch.utils import data
 from utils.setup_elements import transforms_match
 
-def create_task_composition(class_nums, num_tasks, fixed_order=False):
+def create_task_composition(class_nums, num_tasks, fixed_order=False,start_class = 0):
     classes_per_task = class_nums // num_tasks
     total_classes = classes_per_task * num_tasks
-    label_array = np.arange(0, total_classes)
+    label_array = np.arange(start_class, total_classes)
     if not fixed_order:
         np.random.shuffle(label_array)
 
@@ -17,11 +17,11 @@ def create_task_composition(class_nums, num_tasks, fixed_order=False):
         print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
     return task_labels
 
-def create_task_composition_order(class_nums, num_tasks, ):
+def create_task_composition_order(class_nums, num_tasks, start_class = 0):
     classes_per_task = class_nums // num_tasks
     total_classes = classes_per_task * num_tasks
 
-    label = np.arange(0, total_classes)
+    label = np.arange(start_class, total_classes)
     task_org = np.arange(0, num_tasks)
     np.random.shuffle(task_org)
 

@@ -19,7 +19,6 @@ class Original(object):
 
     def get_dims(self):
         # Get data input and output dimensions
-        print("input size {}\noutput size {}".format(self.x.shape[1], self.y.shape[1]))
         return self.x.shape[1], self.y.shape[1]
 
     def show_sample(self, num_plot=1):

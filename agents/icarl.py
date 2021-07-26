@@ -55,7 +55,7 @@ class Icarl(ContinualLearner):
                 else:
                     batch_x = train_x
                 logits = self.forward(batch_x)
-                print("!!output shape",logits.shape)
+
                 self.opt.zero_grad()
                 if self.prev_model is not None:
                     with torch.no_grad():

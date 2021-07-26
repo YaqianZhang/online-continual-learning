@@ -36,6 +36,15 @@ class BasicBlock(nn.Module):
         out = relu(out)
         return out
 
+    def init_normal(m):
+        if type(m) == nn.Linear:
+            nn.init.uniform_(m.weight)
+    #def reset_parameters(self):
+
+
+
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 

@@ -2,7 +2,7 @@ import argparse
 import random
 import numpy as np
 import torch
-from experiment.run import multiple_run#,multiple_RL_run
+from experiment.run import multiple_run,multiple_RLtrainig_run
 from utils.utils import boolean_string
 
 
@@ -19,10 +19,11 @@ def main(args):
     args.trick = {'labels_trick': args.labels_trick, 'separated_softmax': args.separated_softmax,
                   'kd_trick': args.kd_trick, 'kd_trick_star': args.kd_trick_star, 'review_trick': args.review_trick,
                   'nmc_trick': args.nmc_trick}
-    # if(args.num_runs>1):
-    #     multiple_RL_run(args)
-    # else:
-    multiple_run(args)
+    if(args.num_runs>1):
+        multiple_RLtrainig_run(args)
+    else:
+        multiple_run(args)
+
 
 
 if __name__ == "__main__":
@@ -85,7 +86,7 @@ if __name__ == "__main__":
                         help='In NI scenario, should sample images be plotted (default: %(default)s)')
     parser.add_argument('--data', dest='data', default="cifar10",
                         help='Path to the dataset. (default: %(default)s)')
-    parser.add_argument('--cl_type', dest='cl_type', default="nc", choices=['nc', 'ni','nc_balance'],
+    parser.add_argument('--cl_type', dest='cl_type', default="nc", choices=['nc', 'ni','nc_balance',"nc_first_half","nc_second_half"],
                         help='Continual learning type: new class "nc" or new instance "ni". (default: %(default)s)')
     parser.add_argument('--ns_factor', dest='ns_factor', nargs='+',
                         default=(0.0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8, 3.2, 3.6), type=float,
@@ -195,19 +196,22 @@ if __name__ == "__main__":
     parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","dyna","None"],
                         help='If True, adjust mem iter')
 
-    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=3, type=int,
+    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=2, type=int,
                         help='')
 
-    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
+    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=0, type=int,
                         help='')
 
     parser.add_argument('--incoming_ratio', dest='incoming_ratio', default=1.0, type=float,
-                        help='incoming and mem gradient update ratio')
+                        help='incoming  gradient update ratio')
+    parser.add_argument('--mem_ratio', dest='mem_ratio', default=1.0, type=float,
+                        help='mem gradient update ratio')
     parser.add_argument("--dyna_ratio", dest='dyna_ratio', type=str, default="None", choices=['dyna','random','None'],
                         help='adjust dyna_ratio')
 
     #################################### RL basics ####################################
-    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio","RL_memIter","NoRL","DormantRL","RL_ratioMemIter"],#"1dim","2dim",
+    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio",
+                                                                "RL_memIter","NoRL","DormantRL","RL_ratioMemIter","RL_2ratioMemIter"],#"1dim","2dim",
                         help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
 
     parser.add_argument('--action_size', dest='action_size', default=11,
@@ -215,9 +219,11 @@ if __name__ == "__main__":
                         help='Action size (default: %(default)s)')
 
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
-                        choices=["scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc", "relative",
-                                 "multi-step"],
+                        choices=["acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
+                                 "multi-step","multi-step-0","multi-step-0-rlt","multi-step-0-rlt-loss"],
                         help='')
+    parser.add_argument('--reward_rg',dest='reward_rg',default=0,type=float,help="param to for rward regularization")
+    parser.add_argument("--done_freq",dest="done_freq",default=249,type=int)
 
     parser.add_argument("--reward_test_type", dest='reward_test_type', default="None", type=str,
                         choices=["reverse", "relative", "None"],
@@ -228,7 +234,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--state_feature_type", dest='state_feature_type', default="6_dim", type=str,
                         choices=["3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
-                                 "7_dim"],
+                                 "7_dim","task_dim","8_dim"],
                         help='state feature ')
 
     parser.add_argument("--dynamics_type",dest='dynamics_type',default="same_batch",type=str,
@@ -237,6 +243,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--episode_type", dest='episode_type', default="task", type=str, choices=["task", "batch"],
                         help='')
+
 
     #################################### critic training####################################
     parser.add_argument("--critic_ER_type",dest='critic_ER_type',default='random',type=str,choices=["random","recent","recent2"])
@@ -251,24 +258,48 @@ if __name__ == "__main__":
     parser.add_argument('--critic_training_iters', dest='critic_training_iters', default= 1,
                         type=int,
                         help="")
+
+    parser.add_argument('--critic_lr', dest='critic_lr', default=5 * 10 ** (-4),
+                        type=int,
+                        help="")
+
+    parser.add_argument('--critic_wd', dest='critic_wd', default=1 * 10 ** (-4),
+                        type=int,
+                        help="")
+    parser.add_argument('--critic_training_start', dest='critic_training_start', default= 1000,
+                        type=int,
+                        help="")
+
     parser.add_argument('--critic_recent_steps', dest='critic_recent_steps', default= 100,
                         type=int,
                         help="")
-    
+    parser.add_argument('--critic_use_model', dest='critic_use_model', default=False,type=boolean_string,
+
+                        help="")
     #################################### multiple buffer idea ####################################
 
     parser.add_argument('--test_retrieval_step', dest='test_retrieval_step', default= -1,
                         type=int,
                         help="")
 
+    parser.add_argument('--dataset_random_type', dest='dataset_random_type', default= "task_random",
+                        type=str,choices=["order_random","task_random"],
+                        help="")
+
     parser.add_argument('--switch_buffer_type', dest='switch_buffer_type', default= "one_buffer",
-                        type=str,choices=["one_buffer","two_buffer"],
+                        type=str,choices=["one_buffer","two_buffer","dyna_buffer"],
                         help="whether and how to switch replay buffer")
+
+    parser.add_argument('--switch_buffer_freq', dest='switch_buffer_freq', default= 1000,
+                        type=int,
+                        help="")
 
     #################################################
 
-    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["replay_retrieve","mem_ratio","reverse","ratio02","iters5","sigmoidQ","slow_rl_lr","ceof2","ceof0.5","random_RL","action03","relative_reward","dyna12","dyna03","dyna13_old","dyna13_pos","dyna13","restartq","2range","full_range",'greedy_action','large_q',"positive","4range","8range","mem_iter10",
-                                                                                           "dynamic_memIter3","half_range","use_test_buffer","1k_test_buffer","negative"],
+    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["37_actions","small_rl_lr","large_lr","blcTestMem"],
+                        help='')
+
+    parser.add_argument('--test', dest='test', default=" ", type=str,choices=["not_reset"],
                         help='')
 
     parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
@@ -278,7 +309,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
-    torch.cuda.set_device(1)#args.GPU_ID
-    print("device 1")
+    torch.cuda.set_device(args.GPU_ID)#args.GPU_ID
 
     main(args)

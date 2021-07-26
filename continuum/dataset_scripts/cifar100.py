@@ -16,6 +16,7 @@ class CIFAR100(DatasetBase):
         self.task_labels=[]
 
 
+
     def download_load(self):
         dataset_train = datasets.CIFAR100(root=self.root, train=True, download=True)
         self.train_data = dataset_train.data
@@ -34,8 +35,39 @@ class CIFAR100(DatasetBase):
                                                                                         self.params.ns_type, self.params.ns_factor,
                                                                                         plot=self.params.plot_sample)
         elif self.scenario == 'nc':
-            #self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)
-            self.task_labels = create_task_composition_order(class_nums=100, num_tasks=self.task_nums,)
+            if(self.params.dataset_random_type == "task_random"):
+
+                self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)
+            elif(self.params.dataset_random_type == "order_random"):
+                self.task_labels = create_task_composition_order(class_nums=100, num_tasks=self.task_nums,)
+            else:
+                raise NotImplementedError("undefined dataset_random_type",self.params.dataset_random_type)
+
+            self.test_set = []
+            for labels in self.task_labels:
+                x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)
+                self.test_set.append((x_test, y_test))
+        elif self.scenario == 'nc_first_half':
+            if(self.params.dataset_random_type == "task_random"):
+
+                self.task_labels = create_task_composition(class_nums=50, num_tasks=self.task_nums, fixed_order=self.params.fix_order,start_class=0)
+            elif(self.params.dataset_random_type == "order_random"):
+                self.task_labels = create_task_composition_order(class_nums=50, num_tasks=self.task_nums,start_class=0)
+            else:
+                raise NotImplementedError("undefined dataset_random_type",self.params.dataset_random_type)
+
+            self.test_set = []
+            for labels in self.task_labels:
+                x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)
+                self.test_set.append((x_test, y_test))
+        elif self.scenario == 'nc_second_half':
+            if(self.params.dataset_random_type == "task_random"):
+
+                self.task_labels = create_task_composition(class_nums=50, num_tasks=self.task_nums, fixed_order=self.params.fix_order,start_class=50)
+            elif(self.params.dataset_random_type == "order_random"):
+                self.task_labels = create_task_composition_order(class_nums=50, num_tasks=self.task_nums,start_class=50)
+            else:
+                raise NotImplementedError("undefined dataset_random_type",self.params.dataset_random_type)
 
             self.test_set = []
             for labels in self.task_labels:
@@ -48,7 +80,7 @@ class CIFAR100(DatasetBase):
         if self.scenario == 'ni':
             x_train, y_train = self.train_set[cur_task]
             labels = set(y_train)
-        elif self.scenario == 'nc':
+        elif self.scenario[:2] == 'nc' or self.scenario  :
             labels = self.task_labels[cur_task]
             x_train, y_train = load_task_with_labels(self.train_data, self.train_label, labels)
         return x_train, y_train, labels
