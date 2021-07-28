@@ -21,6 +21,7 @@ class ExperienceReplay(ContinualLearner):
         self.mem_iter_list =[]
         self.incoming_ratio_list=[]
         self.mem_ratio_list=[]
+        self.adaptive_ratio = False
         self.setup_RL_agent(model,params)
 
         ## save train acc
@@ -35,6 +36,7 @@ class ExperienceReplay(ContinualLearner):
         self.episode_start_test_acc = None
         self.buff_use ="main buff"
         self.buff_replay_times = 0
+
 
         #self.start_RL = False
         self.evaluator = None
@@ -92,10 +94,12 @@ class ExperienceReplay(ContinualLearner):
 
 
     def setup_RL_agent(self,model,params):
+        if(params.RL_type == "RL_adpRatio"):
+            self.adaptive_ratio = True
         if (params.RL_type != "NoRL" ):
             test_buffer = Test_Buffer(params, )
             self.params.use_test_buffer = True
-            if (params.RL_type in [ "RL_ratio","RL_memIter","RL_ratioMemIter","DormantRL","RL_2ratioMemIter"]):
+            if (params.RL_type in [ "RL_ratio_1para","RL_adpRatio","RL_ratio","RL_memIter","RL_ratioMemIter","DormantRL","RL_2ratioMemIter"]):
                 self.RL_agent = RL_memIter_agent(params)
                 self.RL_env = RL_env_MDP(params, model,test_buffer,self.RL_agent,self)
             else:
@@ -164,7 +168,12 @@ class ExperienceReplay(ContinualLearner):
 
             logits = self.model.forward(batch_x)
 
-        loss = ratio*self.criterion(logits, batch_y)
+        if(self.adaptive_ratio == False):
+
+            loss = ratio*self.criterion(logits, batch_y)
+        else:
+            loss = ratio*self.adaptive_criterion(logits, batch_y,ratio)
+
         if self.params.trick['kd_trick']:
             loss = 1 / (self.task_seen + 1) * loss + (1 - 1 / (self.task_seen + 1)) * \
                    self.kd_manager.get_kd_loss(logits, batch_x)
@@ -260,8 +269,8 @@ class ExperienceReplay(ContinualLearner):
 
             stats_dict.update({'correct_cnt_mem_old': correct_cnt_mem_old,
                           'correct_cnt_mem_new': correct_cnt_mem_new,
-                          "loss_mem_old": loss_mem_old,
-                          "loss_mem_new": loss_mem_new,
+                          "loss_mem_old": loss_mem_old.detach().cpu(),
+                          "loss_mem_new": loss_mem_new.detach().cpu(),
                                "old_task_num":len(y_old),
                                "new_task_num":len(y_new)})
         return stats_dict
@@ -299,7 +308,7 @@ class ExperienceReplay(ContinualLearner):
                               "loss_incoming_value": loss_incoming_value,
                               "loss_mem_value": loss_mem_value,
                               }
-                stats_dict = self.add_old_new_task_feature(mem_x, mem_y, mem_ratio, stats_dict)
+                #stats_dict = self.add_old_new_task_feature(mem_x, mem_y, mem_ratio, stats_dict)
 
             else:
                 correct_cnt_mem = None
@@ -327,8 +336,18 @@ class ExperienceReplay(ContinualLearner):
             correct_cnt = (pred_label == batch_y).sum().item() / batch_y.size(0)
         stats_dict['correct_cnt_test_mem']=correct_cnt
         stats_dict['loss_test_value']=test_memory_loss.item()
+        stats_dict = self.add_old_new_task_feature(batch_x, batch_y, 1.0, stats_dict)
 
         return stats_dict
+    def update_test_memory(self,batch_x,batch_y):
+        if(self.params.test_mem_type == "after"):
+            return batch_x, batch_y
+
+        test_size = int(batch_x.shape[0] * 0.1)
+        # print("save batch to test buffer and buffer",test_size)
+        self.RL_env.test_buffer.update(batch_x[:test_size], batch_y[:test_size])
+
+        return batch_x[test_size:], batch_y[test_size:]
 
     def update_memory(self,batch_x,batch_y):
         # save some parts of batch_x and batch_y into the memory
@@ -394,6 +413,7 @@ class ExperienceReplay(ContinualLearner):
                 batch_x, batch_y = batch_data
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
+                batch_x, batch_y = self.update_test_memory(  batch_x, batch_y)
 
 
 
@@ -433,24 +453,24 @@ class ExperienceReplay(ContinualLearner):
                     if(stats_dict!= None):
                         print(
                             '==>>> it: {},  '
-                            'running train acc: {:.3f}, '
                             'running mem acc: {:.3f}'
-                                .format(i,stats_dict["correct_cnt_incoming"],
-                                        stats_dict["correct_cnt_mem"],
+                            'running train loss: {:.3f}, '
+                                .format(i,stats_dict["loss_mem_value"],stats_dict["loss_incoming_value"],
+
                                         )
                         )
-                        # if ("correct_cnt_mem_new" in stats_dict):
-                        #     print(
-                        #         '==>>> it: {},  '
-                        #             'old mem acc: {:.3f}  num {:d} '
-                        #             'new mem acc: {:.3f} num {:d}  '
-                        #             .format(i,
-                        #                     stats_dict["loss_mem_old"],
-                        #                     stats_dict["old_task_num"],
-                        #                     stats_dict["loss_mem_new"],
-                        #                     stats_dict["new_task_num"],
-                        #                     )
-                        #     )
+                        if ("correct_cnt_mem_new" in stats_dict):
+                            print(
+                                '==>>> it: {},  '
+                                    'old mem acc: {:.3f}  num {:d} '
+                                    'new mem acc: {:.3f} num {:d}  '
+                                    .format(i,
+                                            stats_dict["loss_mem_old"],
+                                            stats_dict["old_task_num"],
+                                            stats_dict["loss_mem_new"],
+                                            stats_dict["new_task_num"],
+                                            )
+                            )
 
                     # print(
                     #     '==>>> it: {},  '

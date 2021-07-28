@@ -282,7 +282,7 @@ if __name__ == "__main__":
                         type=int,
                         help="")
 
-    parser.add_argument('--dataset_random_type', dest='dataset_random_type', default= "task_random",
+    parser.add_argument('--dataset_random_type', dest='dataset_random_type', default= "order_random",
                         type=str,choices=["order_random","task_random"],
                         help="")
 

@@ -58,7 +58,8 @@ class Base_RL_env(object):
         elif(self.params.reward_type == "real_reward"):
             reward =  100*self.CL_agent.evaluator.evaluate_model(self.model,self.CL_agent.task_seen)
         elif(self.params.reward_type == "multi-step"):
-            reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
+            #reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
+            reward = next_stats['loss_test_value']-prev_stats['loss_test_value']
         elif(self.params.reward_type == "multi-step-0"):
             if((i+1) %self.params.done_freq==0):
 

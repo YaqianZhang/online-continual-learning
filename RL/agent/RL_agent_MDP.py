@@ -47,15 +47,43 @@ class RL_memIter_agent(RL_base_agent):
             self.mem_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
             # self.mem_ratio_design_space = [0.0,0.1,0.5,1.0,1.5]
             # self.incoming_ratio_design_space = [0.0, 0.1, 0.5, 1.0, 1.5]
-            self.mem_ratio_design_space = [0.1,0.5,1.0,]
-            self.incoming_ratio_design_space = [ 0.01,0.1, 0.5, 1.0, ]
+            if(params.action_space=="sparse"):
+                self.mem_ratio_design_space = [0.1,0.5,1.0,]
+                self.incoming_ratio_design_space = [ 0.1, 0.5, 1.0, ]
+            elif(params.action_space == "medium"):
+                self.mem_ratio_design_space = [0.1,0.25,0.5,0.75,1.0,]
+                self.incoming_ratio_design_space = [0.1,0.25,0.5,0.75,1.0,]
+            elif(params.action_space == "dense"):
+                self.mem_ratio_design_space = [0.1,0.5,1.0,]
+                self.incoming_ratio_design_space = [ 0.1, 0.5, 1.0, ]
 
             self.action_design_space = []
-            self.action_design_space.append((0,0,0))
-            for i in range(1,len(self.mem_design_space)):
+            if(params.dynamics_type == "same_batch"):
+                self.action_design_space.append((0,0,0))
+            for i in range(0,len(self.mem_design_space)):
                 for j in range(len(self.mem_ratio_design_space)):
                     for k in range(len(self.incoming_ratio_design_space)):
                         self.action_design_space.append((self.mem_design_space[i],self.incoming_ratio_design_space[k],self.mem_ratio_design_space[j]))
+        elif(params.RL_type == "RL_adpRatio"):
+            self.action_design_space = [0.01,0.1,0.5,1.0,]
+        elif(params.RL_type == "RL_ratio_1para"):
+
+            self.mem_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
+            # self.mem_ratio_design_space = [0.0,0.1,0.5,1.0,1.5]
+            # self.incoming_ratio_design_space = [0.0, 0.1, 0.5, 1.0, 1.5]
+            self.mem_ratio_design_space = np.linspace(0.1,0.9,9)
+
+
+            self.action_design_space = []
+            # self.action_design_space.append((0,0,0))
+            for i in range(0, len(self.mem_design_space)):
+                for j in range(len(self.mem_ratio_design_space)):
+                    #for k in range(len(self.incoming_ratio_design_space)):
+                    self.action_design_space.append((self.mem_design_space[i], 1-self.mem_ratio_design_space[j],
+                                                         self.mem_ratio_design_space[j]))
+
+
+
         elif(params.RL_type == "DormantRL"):
             self.action_design_space = []
 
@@ -81,6 +109,20 @@ class RL_memIter_agent(RL_base_agent):
             ob_dim = 7
         elif (state_feature_type == "task_dim"):
             ob_dim = 8
+        elif(state_feature_type == "new_old2"):
+            ob_dim = 2
+        elif(state_feature_type == "new_old4"):
+            ob_dim = 4
+        elif(state_feature_type == "new_old5"):
+            ob_dim = 5
+        elif(state_feature_type == "new_old5t"):
+            ob_dim = 5
+        elif (state_feature_type == "new_old6"):
+            ob_dim = 6
+        elif(state_feature_type == "new_old9"):
+            ob_dim = 9
+        elif(state_feature_type == "new_old11"):
+            ob_dim = 11
         elif (state_feature_type == "8_dim"):
             ob_dim = 8
         else:
