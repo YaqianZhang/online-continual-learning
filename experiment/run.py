@@ -53,7 +53,6 @@ def get_prefix(params,run):
             trick += "testBch" + str(params.test_mem_batchSize)+"_"
         if(params.RL_type == "RL_memIter"):
             trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-<<<<<<< HEAD
         elif(params.RL_type == "RL_2ratioMemIter" ):
             trick += "RL2rmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
         elif (params.RL_type == "RL_ratio_1para"):
@@ -63,44 +62,26 @@ def get_prefix(params,run):
             trick += params.RL_type + "_"
         if(params.action_space != "sparse"):
             trick += params.action_space+"_"
-=======
-        if(params.RL_type == "RL_2ratioMemIter"):
-            trick += "RL2rmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-        else:
-        #if(params.retrieve == "RL"):
-            trick += params.RL_type + "_"
->>>>>>> master
         trick += params.reward_type+"_" ## todo: fix RL_type logic
         trick += str(params.reward_rg)+"_"
         trick += params.state_feature_type+"_"
         if(params.critic_use_model):
             trick += "Qmodel"+"_"
-<<<<<<< HEAD
         if(params.dynamics_type == "next_batch"):
             trick+="nxtBtch"+'_'
-=======
->>>>>>> master
 
         trick += params.critic_ER_type+"_"
         if(params.episode_type == "batch"):
             trick += params.episode_type +"_"
         if(params.test_mem_type == "before"):
-<<<<<<< HEAD
             trick += "bf" +"_"
-=======
-            trick += params.test_mem_type +"_"
->>>>>>> master
 
         ##critic_training
 
         # trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
         # trick += "ERbch"+str(params.ER_batch_size)+"_"
-<<<<<<< HEAD
         if(params.reward_type == "multi-step"):
             trick += "Done"+str(params.done_freq)+"_"
-=======
-        # trick += "Done"+str(params.done_freq)+"_"
->>>>>>> master
         # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
         # if(params.critic_training_iters != 1):
         #     trick += "criticIter" + str(params.critic_training_iters) + "_"
@@ -134,7 +115,7 @@ def get_prefix(params,run):
 
     # t = time.localtime()
     # timestamp = time.strftime('%b-%d-%Y_%H%M', t)
-    folder_path = "results_new_branch/" + str(params.seed)
+    folder_path = "results/" + str(params.seed)
     if (not os.path.exists(folder_path)):
         os.mkdir(folder_path)
     prefix = folder_path + '/' + params.agent +str(params.epoch)+ "_" + params.retrieve[:3] + "_" + params.update[:3] + '_' + trick  + str(
@@ -143,11 +124,7 @@ def get_prefix(params,run):
 
     return prefix
 
-<<<<<<< HEAD
 def save_stats(params,agent,model,accuracy_list,run=1,loss_list=[]):
-=======
-def save_stats(params,agent,model,accuracy_list,run=1):
->>>>>>> master
     prefix = get_prefix(params,run)
 
 
@@ -252,20 +229,14 @@ def multiple_RLtrainig_run(params):
     data_end = time.time()
     print('data setup time: {}'.format(data_end - start))
     accuracy_list = []
-<<<<<<< HEAD
     loss_list=[]
-=======
->>>>>>> master
     model = setup_architecture(params)
     model = maybe_cuda(model, params.cuda)
     opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
     agent = agents[params.agent](model, opt, params)
     for run in range(params.num_runs):
         tmp_acc = []
-<<<<<<< HEAD
         tmp_loss=[]
-=======
->>>>>>> master
         run_start = time.time()
         data_continuum.new_run()
         # initailize agent model
@@ -302,14 +273,9 @@ def multiple_RLtrainig_run(params):
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
 
             agent.train_learner(x_train, y_train,labels)
-<<<<<<< HEAD
             acc_array,loss_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
             tmp_loss.append(loss_array)
-=======
-            acc_array = agent.evaluate(test_loaders)
-            tmp_acc.append(acc_array)
->>>>>>> master
             if (params.RL_type != "NoRL"):
                 agent.RL_env.update_task_reward()
         run_end = time.time()
@@ -317,7 +283,6 @@ def multiple_RLtrainig_run(params):
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
-<<<<<<< HEAD
         loss_list.append(np.array(tmp_loss))
         if(run%3==0):
             accuracy_list_arr = np.array(accuracy_list)
@@ -327,14 +292,6 @@ def multiple_RLtrainig_run(params):
     accuracy_list = np.array(accuracy_list)
     loss_list_arr = np.array(loss_list)
     save_statssave_stats(params, agent, model,accuracy_list,run,loss_list)
-=======
-        if(run%3==0):
-            accuracy_list_arr = np.array(accuracy_list)
-            save_stats(params, agent, model, accuracy_list_arr,run)
-
-    accuracy_list = np.array(accuracy_list)
-    save_stats(params, agent, model,accuracy_list,run)
->>>>>>> master
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()

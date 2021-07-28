@@ -11,6 +11,9 @@ from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
 class RL_memIter_agent(RL_base_agent):
     def __init__(self, params):
         super().__init__(params)
+        # if(self.params.episode_type == "batch"):
+        #     self.total_training_steps = 250
+        # else:
         self.total_training_steps = params.num_runs*5000
 
         self.action_design_space  = self.initialize_actor(params)
@@ -145,12 +148,12 @@ class RL_memIter_agent(RL_base_agent):
         self.grad_norm_clipping=10
         self.loss = torch.nn.SmoothL1Loss()
         self.greedy ="None"
-        if (self.params.episode_type == "batch"):
-            self.rl_lr = 0.0005
-            self.rl_wd = 0.0001
-        else:
+        # if (self.params.episode_type == "batch"):
+        #     self.rl_lr = 0.0005
+        #     self.rl_wd = 0.0001
+        # else:
             #self.rl_lr = self.params.critic_lr(self.params.) #5 * 10 ** (-6)  # -4
-            self.rl_wd = self.params.critic_wd #1 * 10 ** (-6)  # -4
+        self.rl_wd = self.params.critic_wd #1 * 10 ** (-6)  # -4
 
 
 
@@ -243,16 +246,19 @@ class RL_memIter_agent(RL_base_agent):
 
 
     def initialize_q(self):
+        print("initialize q")
+        self.initialize_critic(self.params, self.action_num, self.ob_dim)
+        #self.training_steps = 0
 
-        network = self.q_function
-        for layer in network.children():
-            if hasattr(layer, 'reset_parameters'):
-                layer.reset_parameters()
-
-        network = self.q_function_target
-        for layer in network.children():
-            if hasattr(layer, 'reset_parameters'):
-                layer.reset_parameters()
+        # network = self.q_function
+        # for layer in network.children():
+        #     if hasattr(layer, 'reset_parameters'):
+        #         layer.reset_parameters()
+        #
+        # network = self.q_function_target
+        # for layer in network.children():
+        #     if hasattr(layer, 'reset_parameters'):
+        #         layer.reset_parameters()
 
     def update_q_target(self):
         print("double q update",self.training_steps)
