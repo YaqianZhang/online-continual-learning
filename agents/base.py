@@ -104,6 +104,12 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             return F.nll_loss(ss, labels)
         else:
             return ce(logits, labels)
+    def adaptive_criterion(self,logits,labels,ratio):
+        labels = labels.clone()
+        ce = torch.nn.CrossEntropyLoss(reduction='none')
+        print(ce,ratio)
+        assert False
+        return torch.mean(ce(logits,labels)*ratio)
 
     def forward(self, x):
         return self.model.forward(x)
@@ -111,6 +117,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
     def evaluate(self, test_loaders):
         self.model.eval()
         acc_array = np.zeros(len(test_loaders))
+        loss_array = np.zeros(len(test_loaders))
         if self.params.trick['nmc_trick'] or self.params.agent == 'ICARL':
             exemplar_means = {}
             cls_exemplar = {cls: [] for cls in self.old_labels}
@@ -142,6 +149,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                 old_class_score = AverageMeter()
             for task, test_loader in enumerate(test_loaders):
                 acc = AverageMeter()
+                loss = AverageMeter()
                 for i, (batch_x, batch_y) in enumerate(test_loader):
                     batch_x = maybe_cuda(batch_x, self.cuda)
                     batch_y = maybe_cuda(batch_y, self.cuda)
@@ -158,10 +166,19 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                         _, preds = dists.min(1)
                         correct_cnt = (np.array(self.old_labels)[
                                            preds.tolist()] == batch_y.cpu().numpy()).sum().item() / batch_y.size(0)
+
+                        ## todo:zyq how to compute loss for icarl
+                        logits = self.model.forward(batch_x)
+                        _, pred_label = torch.max(logits, 1)
+                        loss_batch = self.criterion(logits, batch_y)
+
+
                     else:
                         logits = self.model.forward(batch_x)
                         _, pred_label = torch.max(logits, 1)
                         correct_cnt = (pred_label == batch_y).sum().item()/batch_y.size(0)
+                        loss_batch = self.criterion(logits, batch_y)
+
                         if self.params.error_analysis:
                             if task < self.task_seen-1:
                                 # old test
@@ -184,8 +201,11 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                             else:
                                 pass
                     acc.update(correct_cnt, batch_y.size(0))
+                    loss.update(loss_batch,batch_y.size(0))
                 acc_array[task] = acc.avg()
+                loss_array[task] = loss.avg()
         print(acc_array)
+        print(loss_array)
         if self.params.error_analysis:
             self.error_list.append((no, nn, oo, on))
             self.new_class_score.append(new_class_score.avg())
@@ -202,4 +222,4 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             print(self.fc_norm_new)
             print(self.bias_norm_old)
             print(self.bias_norm_new)
-        return acc_array
+        return acc_array,loss_array
