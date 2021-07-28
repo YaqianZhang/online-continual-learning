@@ -210,13 +210,14 @@ if __name__ == "__main__":
                         help='adjust dyna_ratio')
 
     #################################### RL basics ####################################
-    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=["RL_ratio",
+    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_ratio_1para","RL_adpRatio","RL_ratio",
                                                                 "RL_memIter","NoRL","DormantRL","RL_ratioMemIter","RL_2ratioMemIter"],#"1dim","2dim",
                         help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
 
     parser.add_argument('--action_size', dest='action_size', default=11,
                         type=int,
                         help='Action size (default: %(default)s)')
+    parser.add_argument("--action_space",dest="action_space",default="sparse",type=str,choices=["sparse","medium","dense"])
 
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
                         choices=["acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
@@ -233,7 +234,7 @@ if __name__ == "__main__":
                         help='')
 
     parser.add_argument("--state_feature_type", dest='state_feature_type', default="6_dim", type=str,
-                        choices=["3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
+                        choices=["new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
                                  "7_dim","task_dim","8_dim"],
                         help='state feature ')
 
