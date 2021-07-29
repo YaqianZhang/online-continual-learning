@@ -195,7 +195,8 @@ def multiple_run(params):
             print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
 
-            agent.train_learner(x_train, y_train,labels)
+            agent.train_learner(x_train, y_train,)
+           # agent.train_learner(x_train, y_train, labels)
             acc_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
             if (params.RL_type != "NoRL"):
@@ -240,13 +241,7 @@ def multiple_RLtrainig_run(params):
         run_start = time.time()
         data_continuum.new_run()
         # initailize agent model
-        #del agent.model
-        # agent.model = setup_architecture(params)
-        # agent.model = maybe_cuda(agent.model, params.cuda)
-        # agent.opt  = setup_opt(params.optimizer, agent.model, params.learning_rate, params.weight_decay)
-        #
-        # agent.RL_env.model = agent.model
-        # agent.buffer.model = agent.model
+
         agent.initialize_agent(params)
         agent.task_seen =0
         if (params.RL_type != "NoRL"):

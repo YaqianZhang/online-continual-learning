@@ -275,7 +275,7 @@ class RL_memIter_agent(RL_base_agent):
         self.training_steps += 1
         ## DQN
         gamma = 0.99
-        ## add <state, action, reward, next_state> into memory
+        # ## add <state, action, reward, next_state> into memory
         self.ExperienceReplayObj.store(state,action,reward,next_state,done)
 
 

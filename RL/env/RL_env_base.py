@@ -7,10 +7,10 @@ from utils.buffer.buffer_utils import random_retrieve, get_grad_vector
 
 
 class Base_RL_env(object):
-    def __init__(self, params,model,testBuffer,RL_agent,CL_agent):
+    def __init__(self, params,model,memoryManager,RL_agent,CL_agent):
         super().__init__()
         self.model = model
-        self.test_buffer = testBuffer
+        self.memoryManager = memoryManager
         self.RL_agent = RL_agent
         self.CL_agent = CL_agent
 

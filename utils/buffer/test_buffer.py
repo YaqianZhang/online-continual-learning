@@ -16,7 +16,6 @@ class Test_Buffer(torch.nn.Module):
         self.cuda = self.params.cuda
         self.current_index = 0
         self.n_seen_so_far = 0
-        self.task_seen_so_far = 0
         self.training_steps = 0
 
         # define buffer

@@ -5,6 +5,7 @@ from continuum.dataset_scripts.core50 import CORE50
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
 from agents.exp_replay import ExperienceReplay
+from agents.rl_exp_replay import RL_ExperienceReplay
 from agents.agem import AGEM
 from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
@@ -31,6 +32,7 @@ data_objects = {
 
 agents = {
     'ER': ExperienceReplay,
+    'RLER':RL_ExperienceReplay,
     'EWC': EWC_pp,
     'AGEM': AGEM,
     'CNDPM': Cndpm,

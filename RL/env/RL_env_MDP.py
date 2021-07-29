@@ -3,9 +3,10 @@ import numpy as np
 
 from RL.env.RL_env_base import Base_RL_env
 class RL_env_MDP(Base_RL_env):
-    def __init__(self,params,model,testBuffer,RL_agent,CL_agent):
-        super().__init__(params,model,testBuffer,RL_agent,CL_agent)
+    def __init__(self,params,model,memoryManager,RL_agent,CL_agent):
+        super().__init__(params,model,memoryManager,RL_agent,CL_agent)
         self.return_list = []
+        self.memoryManager = memoryManager
 
         if(self.params.RL_type == "DormantRL"):
             self.basic_mem_iters = self.params.mem_iters
@@ -160,7 +161,7 @@ class RL_env_MDP(Base_RL_env):
         if (task_seen == 0 or self.params.RL_type == "NoRL"):
             self.start_RL = False
         else:
-            self.start_RL = self.test_buffer.current_index >= 50#self.params.test_mem_batchSize
+            self.start_RL = self.memoryManager.test_memory_ready()
 
 
 
@@ -179,8 +180,8 @@ class RL_env_MDP(Base_RL_env):
                 done = 0
                 self.total_reward += reward
 
-
-
+            ## add <state, action, reward, next_state> into memory
+            #self.ExperienceReplayObj.store(state, action, reward, next_state, done)
 
             self.RL_agent.update_agent(reward, state,
                                        action, next_state, done)  ## todo next state and done
@@ -209,8 +210,6 @@ class RL_env_MDP(Base_RL_env):
 
         self.check_start_RL(task_seen)
         if (self.params.dynamics_type == "same_batch"):
-            batch_x, batch_y = self.update_memory_before(batch_x, batch_y)
-
 
 
             stats_dict= er_agent.joint_training(batch_x, batch_y, losses_batch, acc_batch, losses_mem, acc_mem,
@@ -218,9 +217,6 @@ class RL_env_MDP(Base_RL_env):
                                                 mem_ratio=self.basic_m_ratio)
             stats_dict = er_agent.compute_test_accuracy(stats_dict)
             self.stats = stats_dict
-            # if(self.stats != None):
-            #     if(self.params.state_feature_type == "task_dim" and ("loss_mem_old" not in stats_dict)):
-            #         self.start_RL =  False ## unable to compute memory_old memory_new
 
             if (self.start_RL and self.stats != None ):
 
@@ -246,11 +242,6 @@ class RL_env_MDP(Base_RL_env):
 
 
 
-    def update_memory_before(self,batch_x,batch_y):
-        test_size = int(batch_x.shape[0] * 0.2)
-        # print("save batch to test buffer and buffer",test_size)
-        self.test_buffer.update(batch_x[:test_size], batch_y[:test_size])
-        return batch_x[test_size:], batch_y[test_size:] #todo save the sample that not used in test memory into training memory
 
 
 
