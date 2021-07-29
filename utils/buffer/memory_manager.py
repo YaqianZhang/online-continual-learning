@@ -1,10 +1,13 @@
 from utils.buffer.buffer import Buffer
 from utils.buffer.tmp_buffer import Tmp_Buffer
 from utils.buffer.test_buffer import Test_Buffer
+import torch
+import numpy as np
 
 class memory_manager_class(object):
     def __init__(self,model,params):
         self.params = params
+        self.mode = model
 
         ## main buffer
         self.buffer = Buffer(model, params)
@@ -123,4 +126,6 @@ class memory_manager_class(object):
                 self.buffer_add.update(batch_x[buffer_size:], batch_y[buffer_size:], self.tmp_buffer)
             else:
                 self.buffer.update(batch_x, batch_y, self.tmp_buffer)
+
+
 

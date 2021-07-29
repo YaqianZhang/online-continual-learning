@@ -214,9 +214,9 @@ class RL_memIter_agent(RL_base_agent):
 
 
     def sample_action(self, state):
+        if(self.params.RL_type == "DormantRL" or self.params.RL_type == "NoRL"):
+            return None
         epsilon = self.exploration.value(self.training_steps)
-
-
         rnd = torch.tensor(1).float().uniform_(0, 1).item()
         if(self.params.critic_use_model):
             if (rnd < epsilon ):  ## take random action
@@ -225,10 +225,7 @@ class RL_memIter_agent(RL_base_agent):
             else:  ## take greedy action
 
                 action = self.take_greedy_action(state)
-
         else:
-
-
             if(rnd<epsilon or (self.training_steps < self.critic_training_start)): ## take random action
                 #action =torch.randint(0,high=121,size=1)## unrepetitive
                 action = np.random.randint(0,self.action_num)#torch.zeros(1).long().random_(0, self.action_num)
@@ -237,8 +234,6 @@ class RL_memIter_agent(RL_base_agent):
                 #q_values
                 self.greedy="greedy"
                 action = self.take_greedy_action(state)
-
-
         self.real_action_list.append(action)
         return  action
     def from_action_to_replay_para(self,action):

@@ -262,6 +262,7 @@ def multiple_RLtrainig_run(params):
             agent.evaluator = None
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
+            if(i>2): break  ## debug
 
 
             print("-----------run {} training task {}-------------".format(run, i))
@@ -286,7 +287,7 @@ def multiple_RLtrainig_run(params):
 
     accuracy_list = np.array(accuracy_list)
     loss_list_arr = np.array(loss_list)
-    save_statssave_stats(params, agent, model,accuracy_list,run,loss_list)
+    save_stats(params, agent, model,accuracy_list,run,loss_list)
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()

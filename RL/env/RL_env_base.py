@@ -7,10 +7,10 @@ from utils.buffer.buffer_utils import random_retrieve, get_grad_vector
 
 
 class Base_RL_env(object):
-    def __init__(self, params,model,memoryManager,RL_agent,CL_agent):
+    def __init__(self, params,model,RL_agent,CL_agent):
         super().__init__()
         self.model = model
-        self.memoryManager = memoryManager
+        #self.memoryManager = memoryManager
         self.RL_agent = RL_agent
         self.CL_agent = CL_agent
 
@@ -20,20 +20,101 @@ class Base_RL_env(object):
         self.reward_list = []
         self.task_reward_list=[]
 
+    def get_state(self, stats_dict, state_feature_type=None,task_seen=None):
+
+        i = stats_dict['batch_num']
+        [correct_cnt_incoming, correct_cnt_mem,
+         loss_incoming_value, loss_mem_value, correct_cnt_test_mem,loss_test_value, ] = [
+            stats_dict['correct_cnt_incoming'],stats_dict['correct_cnt_mem'],
+        stats_dict['loss_incoming_value'],stats_dict['loss_mem_value'],
+        stats_dict['correct_cnt_test_mem'],stats_dict['loss_test_value']]
+
+        if (state_feature_type == None):
+            state_feature_type = self.params.state_feature_type
+        if (state_feature_type == "4_dim"):
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem, i]
+        elif (state_feature_type == "3_dim"):
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem]
+        elif (state_feature_type == "4_loss"):
+            list_data = [loss_incoming_value, loss_mem_value, loss_test_value, i]
+        elif (state_feature_type == "3_loss"):
+            list_data = [loss_incoming_value, loss_mem_value, loss_test_value]
+        elif (state_feature_type == "6_dim"):
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem, \
+                         loss_incoming_value, loss_mem_value, loss_test_value]
+        elif (state_feature_type == "7_dim"):
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem, \
+                         loss_incoming_value, loss_mem_value, loss_test_value, i]
+        elif (state_feature_type == "8_dim"):
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem, \
+                         loss_incoming_value, loss_mem_value, loss_test_value, i,task_seen]
+
+        elif(state_feature_type == "new_old2"):
+            list_data = [
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]]
+            # stats_dict.update({'correct_cnt_mem_old': correct_cnt_mem_old,
+            #               'correct_cnt_mem_new': correct_cnt_mem_new,
+            #               "loss_mem_old": loss_mem_old,
+            #               "loss_mem_new": loss_mem_new,
+            #                    "old_task_num":len(y_old),
+            #                    "new_task_num":len(y_new)})
+        elif(state_feature_type == "new_old4"):
+            list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]
+                         ]
+        elif (state_feature_type == "new_old5"):
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
+                     ]
+        elif (state_feature_type == "new_old5t"):
+            list_data = [task_seen,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
+                     ]
+        elif (state_feature_type == "new_old6"):
+            list_data = [i,task_seen,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
+                     ]
+
+        elif (state_feature_type == "new_old9"):
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                         correct_cnt_mem,loss_mem_value,correct_cnt_test_mem,loss_test_value,
+                     ]
+        elif (state_feature_type == "new_old11"):
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                         correct_cnt_mem,loss_mem_value,correct_cnt_test_mem,loss_test_value,
+                         correct_cnt_incoming,loss_incoming_value,
+                     ]
+
+        elif(state_feature_type == "task_dim"):
+            # if("loss_mem_old" not in stats_dict):
+            #     return None
+
+            list_data = [correct_cnt_incoming, correct_cnt_mem, correct_cnt_test_mem, \
+                         loss_incoming_value, loss_mem_value, loss_test_value,
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]]
 
 
-    def get_reward(self,next_stats,prev_stats,i,action, action_mem_iter, action_incoming_ratio,action_mem_ratio):
+        else:
+            raise NotImplementedError("undefined state type")
+        state = np.array(list_data, dtype=np.float32).reshape([1, -1])
+        state = torch.from_numpy(state)
+        return state
 
 
+
+    def get_reward(self,next_stats,prev_stats,):
+        i= next_stats['batch_num']
         #reward = next_state[0,1].numpy() # todo: RL q test
         correct_cnt_test_mem_prev = prev_stats["correct_cnt_test_mem"]
         [correct_cnt_incoming, correct_cnt_mem,correct_cnt_test_mem,] = [
             next_stats['correct_cnt_incoming'],next_stats['correct_cnt_mem'], next_stats['correct_cnt_test_mem'],]
 
-        if(i==0):
-            self.episode_start_test_acc = 100*correct_cnt_test_mem
-            self.episode_start_test_loss = 100 * next_stats['loss_test_value']
-            print("### i = 0 episode start",self.episode_start_test_acc)
+        # if(i==0):
+        #     self.episode_start_test_acc = 100*correct_cnt_test_mem
+        #     self.episode_start_test_loss = 100 * next_stats['loss_test_value']
+        #     print("### i = 0 episode start",self.episode_start_test_acc)
 
         if(self.params.reward_type == "incoming_acc"):
             reward = correct_cnt_incoming#next_state[0,0].numpy()
