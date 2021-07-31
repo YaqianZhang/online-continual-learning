@@ -98,40 +98,67 @@ class RL_memIter_agent(RL_base_agent):
 
     def initialize_state(self,state_feature_type):
         ######### state ###############
-        if (state_feature_type == "4_dim" or state_feature_type == "4_loss"):
-            ob_dim = 4  ## train_incoming_acc, train_mem_acc, test_mem_acc,batch id (task id?)
-        elif (state_feature_type == "3_dim" or state_feature_type == "3_loss"):
-            ob_dim = 3
-        elif (state_feature_type == "6_dim"):
-            ob_dim = 6
-        elif (state_feature_type == "same_batch"):
-            ob_dim = 6
-        elif (state_feature_type == "same_batch_7_dim"):
-            ob_dim = 7
-        elif (state_feature_type == "7_dim"):
-            ob_dim = 7
-        elif (state_feature_type == "task_dim"):
-            ob_dim = 8
-        elif(state_feature_type == "new_old2"):
-            ob_dim = 2
-        elif(state_feature_type == "new_old4"):
-            ob_dim = 4
-        elif(state_feature_type == "new_old5"):
-            ob_dim = 5
-        elif(state_feature_type == "new_old5t"):
-            ob_dim = 5
-        elif (state_feature_type == "new_old6"):
-            ob_dim = 6
-        elif(state_feature_type == "new_old9"):
-            ob_dim = 9
-        elif(state_feature_type == "new_old11"):
-            ob_dim = 11
-        elif (state_feature_type == "8_dim"):
-            ob_dim = 8
+        ob_dim_dict={
+            "4_dim":4,
+            "4_loss":4,
+            "3_dim":3,
+            "3_loss":3,
+            "6_dim":6,
+            "7_dim":7,
+            "8_dim":8,
+            "task_dim":8,
+            "same_batch":6,
+            "sam_batch_7_dim":7,
+            "new_old2":2,
+            "new_old4": 4,
+            "new_old5": 5,
+            "new_old5t": 5,
+            "new_old6": 6,
+            "new_old7": 7,
+            "new_old9": 9,
+            "new_old11": 1,
+        }
+        if(state_feature_type in ob_dim_dict.keys()):
+            return ob_dim_dict[state_feature_type]
         else:
             raise NotImplementedError("state type is not defined" + state_feature_type)
-        print("obs_dim", ob_dim)
-        return ob_dim
+
+        # if (state_feature_type == "4_dim" or state_feature_type == "4_loss"):
+        #     ob_dim = 4  ## train_incoming_acc, train_mem_acc, test_mem_acc,batch id (task id?)
+        # elif (state_feature_type == "3_dim" or state_feature_type == "3_loss"):
+        #     ob_dim = 3
+        # elif (state_feature_type == "6_dim"):
+        #     ob_dim = 6
+        # elif (state_feature_type == "same_batch"):
+        #     ob_dim = 6
+        # elif (state_feature_type == "same_batch_7_dim"):
+        #     ob_dim = 7
+        # elif (state_feature_type == "7_dim"):
+        #     ob_dim = 7
+        # elif (state_feature_type == "task_dim"):
+        #     ob_dim = 8
+        # elif(state_feature_type == "new_old2"):
+        #     ob_dim = 2
+        # elif(state_feature_type == "new_old4"):
+        #     ob_dim = 4
+        # elif(state_feature_type == "new_old5"):
+        #     ob_dim = 5
+        # elif (state_feature_type == "new_old7"):
+        #     ob_dim = 7
+        # elif(state_feature_type == "new_old5t"):
+        #     ob_dim = 5
+        # elif (state_feature_type == "new_old6"):
+        #     ob_dim = 6
+        # elif(state_feature_type == "new_old9"):
+        #     ob_dim = 9
+        # elif(state_feature_type == "new_old11"):
+        #     ob_dim = 11
+        # elif (state_feature_type == "8_dim"):
+        #     ob_dim = 8
+        # else:
+        #     raise NotImplementedError("state type is not defined" + state_feature_type)
+        # print("obs_dim", ob_dim)
+        # return ob_dim
 
     def initialize_critic(self,params,action_num,ob_dim):
         self.exploration = cl_exploration_schedule(self.total_training_steps)
@@ -336,7 +363,7 @@ class RL_memIter_agent(RL_base_agent):
 
         ## double q network
 
-        if(self.training_steps % self.update_q_target_freq == 0):
+        if(self.params.reward_type[:10] == "multi-step" and  self.training_steps % self.update_q_target_freq == 0):
             self.update_q_target()
 
 
