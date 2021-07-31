@@ -55,7 +55,7 @@ class RL_ExperienceReplay(ExperienceReplay_base):
             self.start_RL = self.memory_manager.test_memory_ready()
 
 
-    def RL_joint_training(self, task_seen,):
+    def RL_joint_training(self, task_seen,i):
 
         self.check_start_RL(task_seen)
         if (self.params.dynamics_type == "same_batch"):
@@ -69,16 +69,24 @@ class RL_ExperienceReplay(ExperienceReplay_base):
                 self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
 
         elif (self.params.dynamics_type == "next_batch"):
-            if (self.start_RL and self.stats != None and ("correct_cnt_mem_old" in self.stats.keys())):
+            if (self.start_RL and self.stats != None  and i>0 and ("correct_cnt_mem_new" in self.stats.keys())):
+                # if(i==0):
+                #     self.stats = self.compute_init_stats(i)
+                #     print(self.stats)
                 self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
             else:
+                if i==0:
+                    self.replay_para = {'mem_iter': self.params.mem_iters,
+                                        'mem_ratio': 0.1,
+                                        'incoming_ratio': 0.1, }
+                else:
 
-                self.replay_para  = {'mem_iter': self.params.mem_iters,
-                               'mem_ratio': self.params.mem_ratio,
-                               'incoming_ratio': self.params.incoming_ratio,}
+                    self.replay_para  = {'mem_iter': self.params.mem_iters,
+                                   'mem_ratio': self.params.mem_ratio,
+                                   'incoming_ratio': self.params.incoming_ratio,}
                 #self.stats = self.replay_and_evaluate(self, replay_para)
                 self.stats = self.joint_training(self.replay_para, TEST=True)
-                print(self.stats.keys())
+                print(self.stats)
         else:
             raise NotImplementedError("undefined dynamics type", self.params.dynamics_type)
         return self.stats
@@ -132,7 +140,7 @@ class RL_ExperienceReplay(ExperienceReplay_base):
 
 
                 else:
-                    stats_dict = self.RL_joint_training(self.task_seen,)
+                    stats_dict = self.RL_joint_training(self.task_seen,i)
                     self.log_stats_list(stats_dict)
                     self.log_test_stats_list(stats_dict)
                     self.mem_iter_list.append(self.RL_env.RL_mem_iters)
@@ -145,15 +153,14 @@ class RL_ExperienceReplay(ExperienceReplay_base):
                         print(self.task_seen, self.memory_manager.test_buffer.current_index, self.start_RL,
                                )
                         print("train steps",self.RL_agent.training_steps,"reward ",self.RL_trainer.reward)
-                        print(self.replay_para)
-                        print(
-                            #" MemIter:",self.RL_env.basic_mem_iters,"+",self.RL_env.RL_mem_iters,
-                              # " iratio:",self.RL_env.RL_incoming_ratio,
-                              # " mratio:",self.RL_env.RL_mem_ratio,
-                              "action:",self.RL_agent.greedy,self.RL_trainer.action,
-
-                              )
+                        print(self.replay_para,"action:",self.RL_agent.greedy,self.RL_trainer.action,)
+                        # print(
+                        #     #" MemIter:",self.RL_env.basic_mem_iters,"+",self.RL_env.RL_mem_iters,
+                        #       # " iratio:",self.RL_env.RL_incoming_ratio,
+                        #       # " mratio:",self.RL_env.RL_mem_ratio,
+                        #       )
                     if(stats_dict!= None):
+                        print(stats_dict['batch_num'])
                         print(
                             '==>>> it: {},  '
                             'running mem acc: {:.3f}'
