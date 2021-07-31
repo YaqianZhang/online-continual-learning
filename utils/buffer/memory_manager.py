@@ -7,7 +7,7 @@ import numpy as np
 class memory_manager_class(object):
     def __init__(self,model,params):
         self.params = params
-        self.mode = model
+        self.model = model
 
         ## main buffer
         self.buffer = Buffer(model, params)
@@ -47,13 +47,13 @@ class memory_manager_class(object):
         self.buffer_add = Buffer(self.model, params)
 
 
-    def retrieve_from_mem(self,batch_x, batch_y):
+    def retrieve_from_mem(self,batch_x, batch_y,task_seen):
 
         if (self.params.switch_buffer_type == "one_buffer"):
             mem_x, mem_y = self.buffer.retrieve(x=batch_x, y=batch_y)
         elif (self.params.switch_buffer_type == "two_buffer"):
 
-            if (self.task_seen % 2 == 1):
+            if (task_seen % 2 == 1):
                 mem_x, mem_y = self.buffer.retrieve(x=batch_x, y=batch_y)
                 self.buff_use = "main buff"
 

@@ -262,7 +262,7 @@ def multiple_RLtrainig_run(params):
             agent.evaluator = None
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            if(i>2): break  ## debug
+            #if(i>2): break  ## debug
 
 
             print("-----------run {} training task {}-------------".format(run, i))
