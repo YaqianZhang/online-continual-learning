@@ -67,10 +67,23 @@ class Base_RL_env(object):
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
                      ]
 
+
         elif (state_feature_type == "new_old7"):
             list_data = [i, stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
                          stats_dict["correct_cnt_incoming"],stats_dict["loss_incoming_value"],
+
+                         ]
+
+        elif (state_feature_type == "new_old6mn"):
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                     stats_dict["train_loss_old"],]
+        elif (state_feature_type == "new_old6m"):
+            list_data = [i,
+                         stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                          stats_dict["loss_mem_value"],
                          ]
 
 

@@ -14,7 +14,7 @@ class RL_memIter_agent(RL_base_agent):
         # if(self.params.episode_type == "batch"):
         #     self.total_training_steps = 250
         # else:
-        self.total_training_steps = params.num_runs*5000
+        self.total_training_steps = params.num_runs*5000 #params['train_steps_total'] #None #
 
         self.action_design_space  = self.initialize_actor(params)
         self.action_num = len(self.action_design_space)  # params.mem_iter_max - params.mem_iter_min +1 ## memITer 0,1,2
@@ -114,6 +114,8 @@ class RL_memIter_agent(RL_base_agent):
             "new_old5": 5,
             "new_old5t": 5,
             "new_old6": 6,
+            "new_old6m": 6,
+            "new_old6mn": 6,
             "new_old7": 7,
             "new_old9": 9,
             "new_old11": 1,
@@ -162,7 +164,7 @@ class RL_memIter_agent(RL_base_agent):
 
     def initialize_critic(self,params,action_num,ob_dim):
         self.exploration = cl_exploration_schedule(self.total_training_steps)
-        self.rl_lr = critic_lr_schedule(self.total_training_steps)
+        self.rl_lr = critic_lr_schedule(self.total_training_steps,self.params.critic_lr_type)
         self.n_layers = params.critic_nlayer
         self.size = params.critic_layer_size
         self.ER_batchsize = params.ER_batch_size

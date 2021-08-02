@@ -234,7 +234,7 @@ if __name__ == "__main__":
                         help='')
 
     parser.add_argument("--state_feature_type", dest='state_feature_type', default="6_dim", type=str,
-                        choices=["new_old7","new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
+                        choices=["new_old7","new_old6mn","new_old6m","new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
                                  "7_dim","task_dim","8_dim"],
                         help='state feature ')
 
@@ -263,6 +263,7 @@ if __name__ == "__main__":
     parser.add_argument('--critic_lr', dest='critic_lr', default=5 * 10 ** (-4),
                         type=int,
                         help="")
+    parser.add_argument("--critic_lr_type",dest="critic_lr_type",default="basic",type=str,choices=["basic","large","mid","small"])
 
     parser.add_argument('--critic_wd', dest='critic_wd', default=1 * 10 ** (-4),
                         type=int,

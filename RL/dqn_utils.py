@@ -28,28 +28,51 @@ def cl_exploration_schedule(num_timesteps):
         ], outside_value=0.02
     )
 
-def critic_lr_schedule(num_timesteps):
+def critic_lr_schedule(num_timesteps,para="basic"):
+    critic_lr_dict={}
+    basic_lr = PiecewiseSchedule(
+        [
+            (0, 1e-3),
+            (num_timesteps /8, 1e-4),
+            (num_timesteps/4, 1e-6),
+        ], outside_value=1e-6
+    )
+
+
+    large_lr = PiecewiseSchedule(
+        [
+            (0, 1e-3),
+            (num_timesteps /8, 0.5*1e-3),
+            (num_timesteps/4, 1e-4),
+        ], outside_value=1e-5
+    )
+    mid_lr = PiecewiseSchedule(
+        [
+            (0, 1e-4),
+            (num_timesteps /8, 1e-5),
+            (num_timesteps/4, 1e-6),
+        ], outside_value=1e-6
+    )
+
+    small_lr = PiecewiseSchedule(
+        [
+            (0, 1e-5),
+            (num_timesteps /8, 1e-6),
+            (num_timesteps/4, 1e-7),
+        ], outside_value=1e-7
+    )
+    critic_lr_dict={"basic":basic_lr,
+                    "large":large_lr,
+                           "mid":mid_lr,
+                          "small":small_lr }
+    return critic_lr_dict[para]
+
     # return PiecewiseSchedule(
     #     [
     #         (0, 1e-3),
     #         (num_timesteps /8, 1e-4),
-    #         (num_timesteps/4, 1e-6),
-    #     ], outside_value=1e-6
-
-    return PiecewiseSchedule(
-        [
-            (0, 1e-3),
-            (num_timesteps /8, 1e-4),
-            (num_timesteps/4, 1e-5),
-        ], outside_value=1e-5
-    )
-
-    # return PiecewiseSchedule(
-    #     [
-    #         (0, 1e-3),
-    #         (num_timesteps /8, 1e-3),
-    #         (num_timesteps/4, 1e-4),
-    #     ], outside_value=1e-4
+    #         (num_timesteps/4, 1e-5),
+    #     ], outside_value=1e-5
     # )
 
 
