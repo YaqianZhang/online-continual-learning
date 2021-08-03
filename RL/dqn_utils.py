@@ -11,7 +11,7 @@ def linear_interpolation(l, r, alpha):
 #         ], outside_value=0.01
 #     )
 
-def cl_exploration_schedule(num_timesteps):
+def cl_exploration_schedule(num_timesteps,para="exp"):
     # return PiecewiseSchedule(
     #     [
     #         (0, 1),
@@ -19,14 +19,44 @@ def cl_exploration_schedule(num_timesteps):
     #         (num_timesteps * 0.7, 0.05),
     #     ], outside_value=0.02
     # )
+    stable = PiecewiseSchedule(
+        [
+            (0, 0.1),
+            (num_timesteps * 0.2, 0.01),
+            (num_timesteps * 0.5, 0.02),
+        ], outside_value=0.02
+    )
 
-    return PiecewiseSchedule(
+    explore= PiecewiseSchedule(
         [
             (0, 1),
             (num_timesteps * 0.2, 0.2),
             (num_timesteps * 0.5, 0.05),
         ], outside_value=0.02
     )
+
+    mid_explore= PiecewiseSchedule(
+        [
+            (0, 1),
+            (num_timesteps*0.125, 0.2),
+            (num_timesteps * 0.25, 0.05),
+        ], outside_value=0.02
+    )
+
+
+    less_explore= PiecewiseSchedule(
+        [
+            (0, 0.1),
+            (num_timesteps * 0.2, 0.05),
+            (num_timesteps * 0.5, 0.01),
+        ], outside_value=0.01
+    )
+
+    explore_schedule_dict={"stb":stable,
+                           "exp":explore,
+                           "m_exp":mid_explore,
+                           "l_exp":less_explore}
+    return explore_schedule_dict[para]
 
 def critic_lr_schedule(num_timesteps,para="basic"):
     critic_lr_dict={}
