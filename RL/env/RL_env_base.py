@@ -119,6 +119,8 @@ class Base_RL_env(object):
 
         else:
             raise NotImplementedError("undefined state type",state_feature_type)
+        if(self.params.dynamics_type == "within_batch"):
+            list_data.append(stats_dict['mini_iter'])
         state = np.array(list_data, dtype=np.float32).reshape([1, -1])
         state = torch.from_numpy(state)
         return state
@@ -162,7 +164,7 @@ class Base_RL_env(object):
             reward =  100*self.CL_agent.evaluator.evaluate_model(self.model,self.CL_agent.task_seen)
         elif(self.params.reward_type == "multi-step"):
             #reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
-            reward = next_stats['loss_test_value']-prev_stats['loss_test_value']
+            reward = -next_stats['loss_test_value'] #-prev_stats['loss_test_value']
         elif(self.params.reward_type == "multi-step-0"):
             if((i+1) %self.params.done_freq==0):
 
@@ -174,7 +176,7 @@ class Base_RL_env(object):
 
                 reward =  100*(correct_cnt_test_mem)-self.episode_start_test_acc
                 self.episode_start_test_acc = 100 * correct_cnt_test_mem
-                print("___________________________________")
+                #print("___________________________________")
                 print("### ",str(i)," episode start", self.episode_start_test_acc)
             else:
                 reward = 0
@@ -184,7 +186,7 @@ class Base_RL_env(object):
                 reward =  100*(next_stats['loss_test_value'])-self.episode_start_test_loss
 
                 self.episode_start_test_loss = 100 * next_stats['loss_test_value']
-                print("___________________________________")
+                #print("___________________________________")
                 print("### ",str(i)," episode start", self.episode_start_test_loss)
             else:
                 reward = 0
