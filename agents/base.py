@@ -205,7 +205,9 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                 acc_array[task] = acc.avg()
                 loss_array[task] = loss.avg()
         print(acc_array)
+
         print(loss_array)
+        print(task, self.task_seen, "acc", np.mean(acc_array[:self.task_seen]), np.mean(loss_array[:self.task_seen]))
         if self.params.error_analysis:
             self.error_list.append((no, nn, oo, on))
             self.new_class_score.append(new_class_score.avg())

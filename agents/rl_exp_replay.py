@@ -1,20 +1,19 @@
-import torch
-import numpy as np
+
 from torch.utils import data
 
-from agents.base import ContinualLearner
-from agents.exp_replay_base import ExperienceReplay_base
+
+from agents.exp_replay_with_feedback import ExperienceReplay_eval
 from continuum.data_utils import dataset_transform
 from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
 
 from RL.RL_trainer import RL_trainer
-from RL.agent.RL_agent_MDP import RL_memIter_agent
 from RL.env.RL_env_MDP import RL_env_MDP
-from utils.buffer.memory_manager import memory_manager_class
+from RL.agent.RL_agent_MDP_DQN import RL_DQN_agent
 
 
-class RL_ExperienceReplay(ExperienceReplay_base):
+
+class RL_ExperienceReplay(ExperienceReplay_eval):
     def __init__(self, model, opt, params):
         super(RL_ExperienceReplay, self).__init__(model, opt, params)
 
@@ -30,7 +29,7 @@ class RL_ExperienceReplay(ExperienceReplay_base):
         if (params.RL_type != "NoRL" ):
 
             if (params.RL_type in [ "RL_ratio_1para","RL_adpRatio","RL_ratio","RL_memIter","RL_ratioMemIter","DormantRL","RL_2ratioMemIter"]):
-                self.RL_agent = RL_memIter_agent(params)
+                self.RL_agent = RL_DQN_agent(params)#RL_memIter_agent(params)
                 self.RL_env = RL_env_MDP(params, model,self.RL_agent,self)
 
                 self.RL_trainer = RL_trainer(params, self.RL_env, self.RL_agent, )
@@ -63,8 +62,6 @@ class RL_ExperienceReplay(ExperienceReplay_base):
 
             self.stats = self.joint_training(self.replay_para,TEST=True)
 
-            #self.stats=self.replay_and_evaluate( basic_replay_para)
-
             if (self.start_RL and self.stats != None):
                 self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
 
@@ -77,8 +74,8 @@ class RL_ExperienceReplay(ExperienceReplay_base):
             else:
                 if i==0:
                     self.replay_para = {'mem_iter': self.params.mem_iters,
-                                        'mem_ratio': 0.1,
-                                        'incoming_ratio': 0.1, }
+                                        'mem_ratio': self.params.task_start_mem_ratio,
+                                        'incoming_ratio': self.params.task_start_incoming_ratio, }
                 else:
 
                     self.replay_para  = {'mem_iter': self.params.mem_iters,
@@ -87,6 +84,23 @@ class RL_ExperienceReplay(ExperienceReplay_base):
                 #self.stats = self.replay_and_evaluate(self, replay_para)
                 self.stats = self.joint_training(self.replay_para, TEST=True)
                 print(self.stats)
+        elif (self.params.dynamics_type == "within_batch"):
+
+            if (self.start_RL and self.stats != None and i > 0 and ("correct_cnt_mem_new" in self.stats.keys())):
+
+                self.replay_para['mem_iter'] = 1
+
+                for mini_iter in range(self.params.mem_iters):
+                    self.stats["mini_iter"]=mini_iter
+                    self.stats = self.RL_trainer.RL_training_step(self.stats, task_seen,)
+            else:
+                self.replay_para = {'mem_iter': self.params.mem_iters,
+                                    'mem_ratio': self.params.mem_ratio,
+                                    'incoming_ratio': self.params.incoming_ratio, }
+
+                self.stats = self.joint_training(self.replay_para, TEST=True)
+
+
         else:
             raise NotImplementedError("undefined dynamics type", self.params.dynamics_type)
         return self.stats
@@ -130,7 +144,14 @@ class RL_ExperienceReplay(ExperienceReplay_base):
                     "batch_y":batch_y,
                     "batch_num":i
                 }
-                if(self.task_seen_so_far==1 or self.params.RL_type == "NoRL"): ## no test data
+                if (self.task_seen_so_far == 1 ):  ## no test data
+                    self.replay_para = {'mem_iter': self.params.mem_iters,
+                                        'mem_ratio': 1,
+                                        'incoming_ratio': 1, }
+
+                    stats_dict = self.joint_training(self.replay_para)
+                    self.log_stats_list(stats_dict)
+                elif(self.params.RL_type == "NoRL"): ## no test data
                     self.replay_para = {'mem_iter': self.params.mem_iters,
                                    'mem_ratio': self.params.mem_ratio,
                                    'incoming_ratio': self.params.incoming_ratio, }
@@ -152,7 +173,7 @@ class RL_ExperienceReplay(ExperienceReplay_base):
                     if(self.params.RL_type != "NoRL"):
                         print(self.task_seen, self.memory_manager.test_buffer.current_index, self.start_RL,
                                )
-                        print("train steps",self.RL_agent.training_steps,"reward ",self.RL_trainer.reward)
+                        print("reward ",self.RL_trainer.reward)
                         print(self.replay_para,"action:",self.RL_agent.greedy,self.RL_trainer.action,)
                         # print(
                         #     #" MemIter:",self.RL_env.basic_mem_iters,"+",self.RL_env.RL_mem_iters,

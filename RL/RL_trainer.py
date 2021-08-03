@@ -20,7 +20,7 @@ class RL_trainer(object):
 
     def update_return(self,done,reward):
         if(done == 1):
-            print("___________________________________")
+            #print("___________________________________")
             self.return_list.append(self.total_reward)
             self.total_reward = 0
         else:
@@ -29,7 +29,9 @@ class RL_trainer(object):
 
 
 
-    def RL_training_step(self,stats_dict, task_seen=None):
+
+
+    def RL_training_step(self,stats_dict, task_seen=None,):
 
         ## step_env based on stats_dict,i
         ## previous history is in self.state, self.action, self.reward
@@ -38,6 +40,7 @@ class RL_trainer(object):
         ## step
 
         [state, reward, action,]=[self.state,  self.reward,self.action,]
+
 
         next_state = self.RL_env.get_state(stats_dict, task_seen=task_seen)
         done = self.RL_env.check_episode_done(stats_dict, )
@@ -49,6 +52,7 @@ class RL_trainer(object):
 
         state = next_state
         action = self.RL_agent.sample_action(state) ## dormant RL
+
         if (action != None ):
             end_stats = self.RL_env.step(action)  ## perform replay
         else:
