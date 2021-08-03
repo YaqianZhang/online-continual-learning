@@ -40,11 +40,19 @@ class RL_env_MDP(Base_RL_env):
 
 
     def check_episode_done(self,stats_dict,):
-        i = stats_dict['batch_num']
-        if ((i + 1) % self.params.done_freq == 0):
-            done = 1
+        if(self.params.dynamics_type == "within_batch"):
+            if(stats_dict["mini_iter"]==(self.params.mem_iters-1)):
+                done = 1
+            else:
+                done = 0
+
+
         else:
-            done = 0
+            i = stats_dict['batch_num']
+            if ((i + 1) % self.params.done_freq == 0):
+                done = 1
+            else:
+                done = 0
         return done
 
     def get_replay_action(self,action):
