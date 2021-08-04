@@ -67,8 +67,12 @@ def get_prefix(params,run):
         trick += params.state_feature_type+"_"
         if(params.critic_use_model):
             trick += "Qmodel"+"_"
+        trick += params.rl_exp_type+"_"
         if(params.dynamics_type == "next_batch"):
             trick+="nxtBtch"+'_'
+        if (params.dynamics_type == "within_batch"):
+            trick += "wthBtch" + '_'
+        trick += str(params.task_start_mem_ratio)+str(params.task_start_incoming_ratio)+"_"
 
         trick += params.critic_ER_type+"_"
         if(params.episode_type == "batch"):
@@ -82,6 +86,8 @@ def get_prefix(params,run):
         # trick += "ERbch"+str(params.ER_batch_size)+"_"
         if(params.reward_type == "multi-step"):
             trick += "Done"+str(params.done_freq)+"_"
+        if(params.critic_lr_type != "basic"):
+            trick +="rllr"+params.critic_lr_type+"_"
         # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
         # if(params.critic_training_iters != 1):
         #     trick += "criticIter" + str(params.critic_training_iters) + "_"
@@ -162,6 +168,8 @@ def multiple_run(params):
     print('Setting up data stream')
     data_continuum = continuum(params.data, params.cl_type, params)
 
+    # params['train_steps_total'] = int(2500/ 10) * params.num_tasks *params.num_runs
+
 
     data_end = time.time()
     print('data setup time: {}'.format(data_end - start))
@@ -170,6 +178,7 @@ def multiple_run(params):
         tmp_acc = []
         run_start = time.time()
         data_continuum.new_run()
+
         model = setup_architecture(params)
         model = maybe_cuda(model, params.cuda)
         opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
@@ -194,6 +203,7 @@ def multiple_run(params):
 
             print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
+
 
             agent.train_learner(x_train, y_train,)
            # agent.train_learner(x_train, y_train, labels)
@@ -280,13 +290,13 @@ def multiple_RLtrainig_run(params):
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
         loss_list.append(np.array(tmp_loss))
-        if(run%3==0):
-            accuracy_list_arr = np.array(accuracy_list)
-            loss_list_arr = np.array(loss_list)
-            save_stats(params, agent, model, accuracy_list_arr,run,loss_list)
+        #if(run%3==0):
+        accuracy_list_arr = np.array(accuracy_list)
+        loss_list_arr = np.array(loss_list)
+        save_stats(params, agent, model, accuracy_list_arr,run,loss_list_arr)
 
     accuracy_list = np.array(accuracy_list)
-    loss_list_arr = np.array(loss_list)
+    loss_list = np.array(loss_list)
     save_stats(params, agent, model,accuracy_list,run,loss_list)
 
     avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
