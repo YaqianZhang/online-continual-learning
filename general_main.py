@@ -206,8 +206,14 @@ if __name__ == "__main__":
                         help='incoming  gradient update ratio')
     parser.add_argument('--mem_ratio', dest='mem_ratio', default=1.0, type=float,
                         help='mem gradient update ratio')
+
+    parser.add_argument('--task_start_mem_ratio', dest='task_start_mem_ratio', default=0.5, type=float,
+                        help='mem gradient update ratio')
+    parser.add_argument('--task_start_incoming_ratio', dest='task_start_incoming_ratio', default=0.1, type=float,
+                        help='mem gradient update ratio')
     parser.add_argument("--dyna_ratio", dest='dyna_ratio', type=str, default="None", choices=['dyna','random','None'],
                         help='adjust dyna_ratio')
+    parser.add_argument("--rl_exp_type",dest="rl_exp_type",type=str,default="exp",choices=["l_exp","stb","exp"])
 
     #################################### RL basics ####################################
     parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_ratio_1para","RL_adpRatio","RL_ratio",
@@ -239,7 +245,7 @@ if __name__ == "__main__":
                         help='state feature ')
 
     parser.add_argument("--dynamics_type",dest='dynamics_type',default="same_batch",type=str,
-                        choices=["same_batch","next_batch"],
+                        choices=["same_batch","next_batch","within_batch"],
                         help='whether the reward and transition dynamics are computed for same incoming batch or not')
 
     parser.add_argument("--episode_type", dest='episode_type', default="task", type=str, choices=["task", "batch"],
@@ -298,8 +304,7 @@ if __name__ == "__main__":
 
     #################################################
 
-    parser.add_argument('--save_prefix', dest='save_prefix', default="", type=str,choices=["misc4","misc3","misc","37_actions","small_rl_lr","large_lr","blcTestMem"],
-                        help='')
+    parser.add_argument('--save_prefix', dest='save_prefix', default="",  help='')
 
     parser.add_argument('--test', dest='test', default=" ", type=str,choices=["not_reset"],
                         help='')
