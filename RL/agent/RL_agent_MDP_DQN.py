@@ -14,6 +14,7 @@ class RL_DQN_agent(RL_memIter_agent):
     def __init__(self, params):
         super().__init__(params)
         self.update_q_target_freq = 1000
+        self.epsilon = None
 
 
 
@@ -22,10 +23,11 @@ class RL_DQN_agent(RL_memIter_agent):
         self.critic = critic_class(params, self.action_num, self.ob_dim,self.total_training_steps,RL_agent=self)
 
 
-        if (params.reward_type[:10] == "multi-step"):
-            self.critic_training_start = params.critic_training_start  # 1000
-        else:
-            self.critic_training_start = params.ER_batch_size * 4
+        # if (params.reward_type[:10] == "multi-step"):
+        #     self.critic_training_start = params.critic_training_start  # 1000
+        # else:
+        #     self.critic_training_start = params.ER_batch_size * 4
+        self.critic_training_start = params.critic_training_start
 
     def take_greedy_action(self,state):
 
@@ -57,10 +59,10 @@ class RL_DQN_agent(RL_memIter_agent):
     def sample_action(self, state):
         if(self.params.RL_type == "DormantRL" or self.params.RL_type == "NoRL"):
             return None
-        epsilon = self.exploration.value(self.training_steps)
+        self.epsilon = self.exploration.value(self.training_steps)
         rnd = torch.tensor(1).float().uniform_(0, 1).item()
         if(self.params.critic_use_model):
-            if (rnd < epsilon ):  ## take random action
+            if (rnd < self.epsilon ):  ## take random action
 
                 action = np.random.randint(0, self.action_num)  # torch.zeros(1).long().random_(0, self.action_num)
                 self.greedy = "random"
@@ -69,7 +71,7 @@ class RL_DQN_agent(RL_memIter_agent):
                 action = self.take_greedy_action(state)
                 self.greedy = "greedy"
         else:
-            if(rnd<epsilon or (self.training_steps < self.critic_training_start)): ## take random action
+            if(rnd<self.epsilon or (self.training_steps < self.critic_training_start)): ## take random action
                 #action =torch.randint(0,high=121,size=1)## unrepetitive
                 action = np.random.randint(0,self.action_num)#torch.zeros(1).long().random_(0, self.action_num)
                 self.greedy="random"

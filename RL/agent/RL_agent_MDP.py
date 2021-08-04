@@ -66,15 +66,17 @@ class RL_memIter_agent(object):
             self.mem_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
             # self.mem_ratio_design_space = [0.0,0.1,0.5,1.0,1.5]
             # self.incoming_ratio_design_space = [0.0, 0.1, 0.5, 1.0, 1.5]
-            if (params.action_space == "sparse"):
+            if (params.action_space_type == "sparse"):
                 self.mem_ratio_design_space = [0.1, 0.5, 1.0, ]
                 self.incoming_ratio_design_space = [0.1, 0.5, 1.0, ]
-            elif (params.action_space == "medium"):
+            elif (params.action_space_type == "medium"):
+                self.mem_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
+                self.incoming_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
+
+            elif (params.action_space_type == "dense"):
                 self.mem_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
                 self.incoming_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
-            elif (params.action_space == "dense"):
-                self.mem_ratio_design_space = [0.1, 0.5, 1.0, ]
-                self.incoming_ratio_design_space = [0.1, 0.5, 1.0, ]
+
 
             self.action_design_space = []
             if (params.dynamics_type == "same_batch"):
@@ -131,6 +133,7 @@ class RL_memIter_agent(object):
             "new_old6": 6,
             "new_old6m": 6,
             "new_old6mn": 6,
+            "new_old6mnt": 7,
             "new_old7": 7,
             "new_old9": 9,
             "new_old11": 1,

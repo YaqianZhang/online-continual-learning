@@ -79,6 +79,10 @@ class Base_RL_env(object):
             list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
                      stats_dict["train_loss_old"],]
+        elif (state_feature_type == "new_old6mnt"):
+            list_data = [i,task_seen,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                     stats_dict["train_loss_old"],]
         elif (state_feature_type == "new_old6m"):
             list_data = [i,
                          stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],

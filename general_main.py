@@ -213,7 +213,7 @@ if __name__ == "__main__":
                         help='mem gradient update ratio')
     parser.add_argument("--dyna_ratio", dest='dyna_ratio', type=str, default="None", choices=['dyna','random','None'],
                         help='adjust dyna_ratio')
-    parser.add_argument("--rl_exp_type",dest="rl_exp_type",type=str,default="exp",choices=["l_exp","stb","exp"])
+    parser.add_argument("--rl_exp_type",dest="rl_exp_type",type=str,default="exp",choices=["l_exp","stb","exp","m_exp","m_exp2"])
 
     #################################### RL basics ####################################
     parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_ratio_1para","RL_adpRatio","RL_ratio",
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument('--action_size', dest='action_size', default=11,
                         type=int,
                         help='Action size (default: %(default)s)')
-    parser.add_argument("--action_space",dest="action_space",default="sparse",type=str,choices=["sparse","medium","dense"])
+    parser.add_argument("--action_space_type",dest="action_space_type",default="sparse",type=str,choices=["sparse","medium","dense"])
 
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
                         choices=["acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
@@ -240,7 +240,7 @@ if __name__ == "__main__":
                         help='')
 
     parser.add_argument("--state_feature_type", dest='state_feature_type', default="6_dim", type=str,
-                        choices=["new_old7","new_old6mn","new_old6m","new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
+                        choices=["new_old6mnt","new_old7","new_old6mn","new_old6m","new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
                                  "7_dim","task_dim","8_dim"],
                         help='state feature ')
 
@@ -269,12 +269,12 @@ if __name__ == "__main__":
     parser.add_argument('--critic_lr', dest='critic_lr', default=5 * 10 ** (-4),
                         type=int,
                         help="")
-    parser.add_argument("--critic_lr_type",dest="critic_lr_type",default="basic",type=str,choices=["basic","large","mid","small"])
+    parser.add_argument("--critic_lr_type",dest="critic_lr_type",default="basic",type=str,choices=["static","basic","large","mid","small"])
 
     parser.add_argument('--critic_wd', dest='critic_wd', default=1 * 10 ** (-4),
                         type=int,
                         help="")
-    parser.add_argument('--critic_training_start', dest='critic_training_start', default= 1000,
+    parser.add_argument('--critic_training_start', dest='critic_training_start', default= 200,
                         type=int,
                         help="")
 

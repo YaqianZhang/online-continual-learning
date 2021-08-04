@@ -87,7 +87,7 @@ class ExperienceReplay_eval(ExperienceReplay_base):
         #mem_x, mem_y = self.memory_manager.buffer.retrieve(retrieve_num=300)
 
         #train_loss,train_acc = self.evaluate_model(mem_x, mem_y)
-        if(self.params.state_feature_type == "new_old6mn"):
+        if(self.params.state_feature_type == "new_old6mn" or self.params.state_feature_type == "new_old6mnt" ):
            # print("!! add more features")
 
             mem_x, mem_y = self.memory_manager.buffer.retrieve(x=batch_x, y=batch_y,retrieve_num=50)

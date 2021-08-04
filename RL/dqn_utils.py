@@ -42,6 +42,13 @@ def cl_exploration_schedule(num_timesteps,para="exp"):
             (num_timesteps * 0.25, 0.05),
         ], outside_value=0.02
     )
+    mid_explore2= PiecewiseSchedule(
+        [
+            (0, 0.5),
+            (num_timesteps*0.125, 0.2),
+            (num_timesteps * 0.25, 0.01),
+        ], outside_value=0.01
+    )
 
 
     less_explore= PiecewiseSchedule(
@@ -55,6 +62,7 @@ def cl_exploration_schedule(num_timesteps,para="exp"):
     explore_schedule_dict={"stb":stable,
                            "exp":explore,
                            "m_exp":mid_explore,
+                           "m_exp2": mid_explore2,
                            "l_exp":less_explore}
     return explore_schedule_dict[para]
 
@@ -66,6 +74,14 @@ def critic_lr_schedule(num_timesteps,para="basic"):
             (num_timesteps /8, 1e-4),
             (num_timesteps/4, 1e-6),
         ], outside_value=1e-6
+    )
+
+    static_lr = PiecewiseSchedule(
+        [
+            (0, 1e-3),
+            (num_timesteps /8, 1e-4),
+            (num_timesteps/4, 1e-4),
+        ], outside_value=1e-4
     )
 
 
@@ -91,7 +107,8 @@ def critic_lr_schedule(num_timesteps,para="basic"):
             (num_timesteps/4, 1e-7),
         ], outside_value=1e-7
     )
-    critic_lr_dict={"basic":basic_lr,
+    critic_lr_dict={"static":static_lr,
+                    "basic":basic_lr,
                     "large":large_lr,
                            "mid":mid_lr,
                           "small":small_lr }

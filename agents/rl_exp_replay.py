@@ -38,14 +38,6 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
 
 
 
-    # def replay_and_evaluate(self,replay_para):
-    #
-    #     next_stats_dict = self.joint_training(replay_para)
-    #     test_stats_dict = self.compute_test_accuracy()
-    #     next_stats_dict.update(test_stats_dict)
-    #
-    #     return next_stats_dict
-
     def check_start_RL(self,task_seen):
 
         if (task_seen == 0 or self.params.RL_type == "NoRL"):
@@ -71,11 +63,20 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
                 #     self.stats = self.compute_init_stats(i)
                 #     print(self.stats)
                 self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
+                if(i==1):
+
+                    print(i, self.RL_trainer.action,self.RL_agent.greedy)
             else:
                 if i==0:
-                    self.replay_para = {'mem_iter': self.params.mem_iters,
-                                        'mem_ratio': self.params.task_start_mem_ratio,
-                                        'incoming_ratio': self.params.task_start_incoming_ratio, }
+                    if(self.params.RL_type == "DormantRL"):
+                        self.replay_para = {'mem_iter': self.params.mem_iters,
+                                            'mem_ratio': self.params.mem_ratio,
+                                            'incoming_ratio': self.params.incoming_ratio, }
+                    else:
+
+                        self.replay_para = {'mem_iter': self.params.mem_iters,
+                                            'mem_ratio': self.params.task_start_mem_ratio,
+                                            'incoming_ratio': self.params.task_start_incoming_ratio, }
                 else:
 
                     self.replay_para  = {'mem_iter': self.params.mem_iters,
@@ -173,7 +174,7 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
                     if(self.params.RL_type != "NoRL"):
                         print(self.task_seen, self.memory_manager.test_buffer.current_index, self.start_RL,
                                )
-                        print("reward ",self.RL_trainer.reward)
+                        print("reward ",self.RL_trainer.reward,"RL update steps:",self.RL_agent.training_steps,"eps:",self.RL_agent.epsilon)
                         print(self.replay_para,"action:",self.RL_agent.greedy,self.RL_trainer.action,)
                         # print(
                         #     #" MemIter:",self.RL_env.basic_mem_iters,"+",self.RL_env.RL_mem_iters,

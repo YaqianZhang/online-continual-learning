@@ -60,11 +60,13 @@ def get_prefix(params,run):
         else:
         #if(params.retrieve == "RL"):
             trick += params.RL_type + "_"
-        if(params.action_space != "sparse"):
-            trick += params.action_space+"_"
+        if(params.action_space_type != "sparse"):
+            trick += params.action_space_type+"_"
         trick += params.reward_type+"_" ## todo: fix RL_type logic
         trick += str(params.reward_rg)+"_"
         trick += params.state_feature_type+"_"
+        if(params.critic_training_start != 1000):
+            trick += "qstart"+str(params.critic_training_start)+"_"
         if(params.critic_use_model):
             trick += "Qmodel"+"_"
         trick += params.rl_exp_type+"_"

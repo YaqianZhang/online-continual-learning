@@ -53,6 +53,7 @@ class RL_trainer(object):
         state = next_state
         action = self.RL_agent.sample_action(state) ## dormant RL
 
+
         if (action != None ):
             end_stats = self.RL_env.step(action)  ## perform replay
         else:
