@@ -2,6 +2,7 @@
 *.sh
 *.ipynb
 *__pycache__*
+figures/
 results/
 datasets/
 *ipynb_checkpoints*
