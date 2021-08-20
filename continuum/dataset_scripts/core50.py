@@ -59,6 +59,8 @@ class CORE50(DatasetBase):
         self.test_set = []
         print('Loading test set...')
         test_idx_list = self.LUP[self.scenario][cur_run][-1]
+        print(self.LUP['ni'])
+        assert False
 
         #test paths
         test_paths = []

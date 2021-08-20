@@ -1,6 +1,6 @@
 import numpy as np
 from torchvision import datasets
-from continuum.data_utils import create_task_composition, load_task_with_labels,create_task_composition_order
+from continuum.data_utils import create_task_composition, load_task_with_labels,create_task_composition_order,load_task_with_labels_correct
 from continuum.dataset_scripts.dataset_base import DatasetBase
 from continuum.non_stationary import construct_ns_multiple_wrapper, test_ns
 
@@ -38,6 +38,7 @@ class CIFAR100(DatasetBase):
             if(self.params.dataset_random_type == "task_random"):
 
                 self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)
+                print(self.task_labels)
             elif(self.params.dataset_random_type == "order_random"):
                 self.task_labels = create_task_composition_order(class_nums=100, num_tasks=self.task_nums,)
             else:
@@ -45,8 +46,11 @@ class CIFAR100(DatasetBase):
 
             self.test_set = []
             for labels in self.task_labels:
+
                 x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)
+                #print(labels,np.unique(y_test))
                 self.test_set.append((x_test, y_test))
+
         elif self.scenario == 'nc_first_half':
             if(self.params.dataset_random_type == "task_random"):
 

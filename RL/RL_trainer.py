@@ -44,13 +44,19 @@ class RL_trainer(object):
 
         next_state = self.RL_env.get_state(stats_dict, task_seen=task_seen)
         done = self.RL_env.check_episode_done(stats_dict, )
-        if (state != None and reward != None and action != None):
+        if (state != None ):
             self.update_return( done, reward)
+            self.RL_agent.real_reward_list.append(reward)
+            self.RL_agent.RL_running_steps += 1
+            self.RL_agent.ExperienceReplayObj.store(state, action, reward, next_state, done)
             self.RL_agent.update_agent(reward, state,
                                        action, next_state, done)  ## update RL agent
 
 
         state = next_state
+
+
+
         action = self.RL_agent.sample_action(state) ## dormant RL
 
 
@@ -59,7 +65,15 @@ class RL_trainer(object):
         else:
             end_stats = stats_dict
 
+
         reward = self.RL_env.get_reward(end_stats, stats_dict,)
+        if(self.RL_agent.greedy == "greedy"):
+            self.RL_agent.real_q.append(reward)
+            self.RL_agent.greedy_action.append(action)
+
+            self.RL_agent.select_batch_num.append(state[0][0].item())
+
+
 
         [self.state, self.action, self.reward] =  [state,  action,reward, ]
         return end_stats

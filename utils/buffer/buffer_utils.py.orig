@@ -2,9 +2,8 @@ import torch
 import numpy as np
 from utils.utils import maybe_cuda
 from collections import defaultdict
-from collections import Counter
-import random
-
+#import os
+#os.environ['cuda']='0'
 
 def random_retrieve(buffer, num_retrieve, excl_indices=None, return_indices=False):
     if (buffer.params.replay_old_only):

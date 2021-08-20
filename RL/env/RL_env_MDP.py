@@ -48,7 +48,7 @@ class RL_env_MDP(Base_RL_env):
 
 
         else:
-            i = stats_dict['batch_num']
+            i = self.CL_agent.incoming_batch ['batch_num'] #stats_dict['batch_num']
             if ((i + 1) % self.params.done_freq == 0):
                 done = 1
             else:
@@ -63,6 +63,10 @@ class RL_env_MDP(Base_RL_env):
             self.RL_incoming_ratio = self.RL_agent.from_action_to_replay_para(action)
         elif(self.params.RL_type == "RL_ratioMemIter"):
             self.RL_mem_iters,self.RL_incoming_ratio = self.RL_agent.from_action_to_replay_para(action)
+        elif(self.params.RL_type == "RL_actor"):
+            self.RL_incoming_ratio = action
+            self.RL_mem_ratio = 1
+            self.RL_mem_iters=1
         elif(self.params.RL_type == "RL_2ratioMemIter" or self.params.RL_type == "RL_ratio_1para"):
             self.RL_mem_iters,self.RL_incoming_ratio,self.RL_mem_ratio = self.RL_agent.from_action_to_replay_para(action)
             # elif(self.params.RL_type == "RL_adpRatio"):

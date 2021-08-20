@@ -21,7 +21,7 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                  n_layers,
                  size,
                  discrete=False,
-                 learning_rate=1e-4,
+                 learning_rate=1e-3,
                  training=True,
                  nn_baseline=False,
                  **kwargs
@@ -53,14 +53,19 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             self.logits_na = None
             self.mean_net = build_mlp(input_size=self.ob_dim,
                                       output_size=self.ac_dim,
-                                      n_layers=self.n_layers, size=self.size)
+                                      n_layers=self.n_layers, size=self.size,
+                                      output_activation="relu")
             self.logstd = nn.Parameter(
-                torch.zeros(self.ac_dim, dtype=torch.float32, )
+               torch.tensor(0)*torch.ones(self.ac_dim, dtype=torch.float32, )
             )
             #self.mean_net.to(ptu.device)
-            self.mean_net = maybe_cuda(self.mean_net)
-            #self.logstd.to(ptu.device)
-            self.logstd = maybe_cuda(self.logstd)
+            device = torch.device("cuda:" + str(0))
+            #self.mean_net = maybe_cuda(self.mean_net)
+            self.logstd.to(device)
+            self.mean_net.to(device)
+
+
+
             self.optimizer = optim.Adam(
                 itertools.chain([self.logstd], self.mean_net.parameters()),
                 self.learning_rate
@@ -100,16 +105,24 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # TODO return the action that the policy prescribes
         observation_tensor = torch.tensor(observation, dtype=torch.float)#.to(ptu.device)
         observation_tensor = maybe_cuda(observation_tensor)
-        action_distribution = self.forward(observation_tensor)
-        action = action_distribution.sample().cpu().numpy()
-        return action
+        action_distribution,mean,std = self.forward(observation_tensor)
+        #print("mean", mean.item(), std.item())
+
+        action = action_distribution.sample()
+        action_value = action.detach().cpu().item()
+        if(action_value <0.1):
+            action_value = 0.1
+        if(action_value > 1.5):
+            action_value = 1.5
+
+        return action_value
 
     def train_batch(self, state_batch, action_batch, reward_batch, next_state_batch, done_batch):
 
-        action_distribution = self.forward(state_batch)
+        action_distribution, mean,std = self.forward(state_batch)
         log_prob = action_distribution.log_prob(action_batch)
-        loss = torch.sum(log_prob*reward_batch)
-
+        loss = -torch.sum(log_prob*reward_batch,)
+        print("!!!!! state batch",state_batch)
 
 
 
@@ -134,14 +147,18 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor):
+
         if self.discrete:
             dist = distributions.Categorical(logits=self.logits_na(observation))
         else:
-            dist = distributions.Normal(
-                self.mean_net(observation),
-                torch.exp(self.logstd)[None],
-            )
-        return dist
+            mean = self.mean_net(observation)
+            std = maybe_cuda(torch.exp(self.logstd)[None])
+            dist = distributions.Normal(mean,std)
+
+
+
+
+        return dist,mean,std
 
 
 

@@ -21,10 +21,18 @@ def cl_exploration_schedule(num_timesteps,para="exp"):
     # )
     stable = PiecewiseSchedule(
         [
-            (0, 0.1),
-            (num_timesteps * 0.2, 0.01),
+            (0, 0.02),
+            (num_timesteps * 0.2, 0.02),
             (num_timesteps * 0.5, 0.02),
         ], outside_value=0.02
+    )
+
+    stable2 = PiecewiseSchedule(
+        [
+            (0, 0.1),
+            (num_timesteps * 0.2, 0.1),
+            (num_timesteps * 0.5, 0.1),
+        ], outside_value=0.1
     )
 
     explore= PiecewiseSchedule(
@@ -42,12 +50,21 @@ def cl_exploration_schedule(num_timesteps,para="exp"):
             (num_timesteps * 0.25, 0.05),
         ], outside_value=0.02
     )
+
+    mid_explore3= PiecewiseSchedule(
+        [
+            (0, 1),
+            (num_timesteps/20, 0.2),
+            (num_timesteps * 0.25, 0.1),
+            (num_timesteps * 0.5, 0.05),
+        ], outside_value=0.05
+    )
     mid_explore2= PiecewiseSchedule(
         [
             (0, 0.5),
             (num_timesteps*0.125, 0.2),
-            (num_timesteps * 0.25, 0.01),
-        ], outside_value=0.01
+            (num_timesteps * 0.25, 0.05),
+        ], outside_value=0.02
     )
 
 
@@ -60,9 +77,11 @@ def cl_exploration_schedule(num_timesteps,para="exp"):
     )
 
     explore_schedule_dict={"stb":stable,
+                           "stb2": stable2,
                            "exp":explore,
                            "m_exp":mid_explore,
                            "m_exp2": mid_explore2,
+                           "m_exp3": mid_explore3,
                            "l_exp":less_explore}
     return explore_schedule_dict[para]
 
@@ -82,6 +101,14 @@ def critic_lr_schedule(num_timesteps,para="basic"):
             (num_timesteps /8, 1e-4),
             (num_timesteps/4, 1e-4),
         ], outside_value=1e-4
+    )
+
+    static_lr2 = PiecewiseSchedule(
+        [
+            (0, 1e-3),
+            (num_timesteps /8, 1e-4),
+            (num_timesteps/4, 1e-5),
+        ], outside_value=1e-5
     )
 
 
@@ -108,6 +135,7 @@ def critic_lr_schedule(num_timesteps,para="basic"):
         ], outside_value=1e-7
     )
     critic_lr_dict={"static":static_lr,
+                    "static2": static_lr2,
                     "basic":basic_lr,
                     "large":large_lr,
                            "mid":mid_lr,

@@ -10,6 +10,7 @@ from utils.utils import maybe_cuda, AverageMeter
 from RL.RL_trainer import RL_trainer
 from RL.env.RL_env_MDP import RL_env_MDP
 from RL.agent.RL_agent_MDP_DQN import RL_DQN_agent
+from RL.agent.RL_pg_agent import RL_pg_agent
 
 
 
@@ -20,6 +21,7 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
 
         self.setup_RL_agent(model, params)
         self.start_RL = False
+        self.start_task = 1
 
 
 
@@ -30,6 +32,11 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
 
             if (params.RL_type in [ "RL_ratio_1para","RL_adpRatio","RL_ratio","RL_memIter","RL_ratioMemIter","DormantRL","RL_2ratioMemIter"]):
                 self.RL_agent = RL_DQN_agent(params)#RL_memIter_agent(params)
+                self.RL_env = RL_env_MDP(params, model,self.RL_agent,self)
+
+                self.RL_trainer = RL_trainer(params, self.RL_env, self.RL_agent, )
+            elif (params.RL_type in [ "RL_actor"]):
+                self.RL_agent = RL_pg_agent(params)#RL_memIter_agent(params)
                 self.RL_env = RL_env_MDP(params, model,self.RL_agent,self)
 
                 self.RL_trainer = RL_trainer(params, self.RL_env, self.RL_agent, )
@@ -58,16 +65,14 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
                 self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
 
         elif (self.params.dynamics_type == "next_batch"):
-            if (self.start_RL and self.stats != None  and i>0 and ("correct_cnt_mem_new" in self.stats.keys())):
-                # if(i==0):
-                #     self.stats = self.compute_init_stats(i)
-                #     print(self.stats)
-                self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
-                if(i==1):
+            if (self.start_RL and self.stats != None  and i>self.params.RL_start_batchstep and ("correct_cnt_mem_new" in self.stats.keys())):
 
-                    print(i, self.RL_trainer.action,self.RL_agent.greedy)
+                self.stats = self.RL_trainer.RL_training_step(self.stats,  task_seen)
+
             else:
-                if i==0:
+                print("not RL batch num",i)
+                if i<= self.params.RL_start_batchstep:
+
                     if(self.params.RL_type == "DormantRL"):
                         self.replay_para = {'mem_iter': self.params.mem_iters,
                                             'mem_ratio': self.params.mem_ratio,
@@ -77,7 +82,11 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
                         self.replay_para = {'mem_iter': self.params.mem_iters,
                                             'mem_ratio': self.params.task_start_mem_ratio,
                                             'incoming_ratio': self.params.task_start_incoming_ratio, }
+                        if (self.params.save_prefix == "tsbug"):
+                            self.RL_trainer.state = None
+                            self.RL_trainer.action = 3
                 else:
+
 
                     self.replay_para  = {'mem_iter': self.params.mem_iters,
                                    'mem_ratio': self.params.mem_ratio,
@@ -106,12 +115,19 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
             raise NotImplementedError("undefined dynamics type", self.params.dynamics_type)
         return self.stats
 
+    def compute_incoming_influence(self):
+        return self.memory_manager.compute_incoming_influence(self.incoming_batch['batch_x'],self.incoming_batch['batch_y'])
+
 
     def train_learner(self, x_train, y_train,labels=None):
+        print("new task!!!!!!!!!!!!!!!")
 
         if(self.params.episode_type == "batch"):
             self.RL_agent.initialize_q()
         ## reset q function
+        self.memory_manager.reset_new_old()
+        if(self.params.critic_ER_type == "recent3" or self.params.critic_ER_type == "recent4"):
+            self.RL_agent.ExperienceReplayObj.reset_RL_buffer()
 
         self.task_seen_so_far += 1
 
@@ -132,20 +148,27 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
         self.batch_num = len(train_loader)
 
 
+
         for ep in range(self.epoch):
             for i, batch_data in enumerate(train_loader):
                 # fetch incoming batch data
+                if(self.params.RL_type != "NoRL"):
+                    self.RL_agent.batch_num = i
+                    self.RL_agent.greedy = None
                 batch_x, batch_y = batch_data
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
                 batch_x, batch_y = self.memory_manager.update_before_training(  batch_x, batch_y)
+
+
+
 
                 self.incoming_batch={
                     "batch_x":batch_x,
                     "batch_y":batch_y,
                     "batch_num":i
                 }
-                if (self.task_seen_so_far == 1 ):  ## no test data
+                if (self.task_seen_so_far == self.start_task ):  ## no test data
                     self.replay_para = {'mem_iter': self.params.mem_iters,
                                         'mem_ratio': 1,
                                         'incoming_ratio': 1, }
@@ -174,39 +197,39 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
                     if(self.params.RL_type != "NoRL"):
                         print(self.task_seen, self.memory_manager.test_buffer.current_index, self.start_RL,
                                )
-                        print("reward ",self.RL_trainer.reward,"RL update steps:",self.RL_agent.training_steps,"eps:",self.RL_agent.epsilon)
+                        print(i,"reward ",self.RL_trainer.reward,"RL run steps:",self.RL_agent.RL_running_steps,"q update",self.RL_agent.RL_agent_update_steps,"eps:",self.RL_agent.epsilon)
                         print(self.replay_para,"action:",self.RL_agent.greedy,self.RL_trainer.action,)
                         # print(
                         #     #" MemIter:",self.RL_env.basic_mem_iters,"+",self.RL_env.RL_mem_iters,
                         #       # " iratio:",self.RL_env.RL_incoming_ratio,
                         #       # " mratio:",self.RL_env.RL_mem_ratio,
                         #       )
-                    if(stats_dict!= None):
-                        print(stats_dict['batch_num'])
-                        print(
-                            '==>>> it: {},  '
-                            'running mem acc: {:.3f}'
-                            'running train loss: {:.3f}, '
-                                .format(i,stats_dict["loss_mem_value"],stats_dict["loss_incoming_value"],
+                    # if(stats_dict!= None):
+                    #     #print(stats_dict['batch_num'])
+                    #     print(
+                    #         '==>>> it: {},  '
+                    #         'running mem acc: {:.3f}'
+                    #         'running train loss: {:.3f}, '
+                    #             .format(i,stats_dict["loss_mem_value"],stats_dict["loss_incoming_value"],
+                    #
+                    #                     )
+                    #     )
+                    #     if ("correct_cnt_mem_new" in stats_dict):
+                    #         print(
+                    #             '==>>> it: {},  '
+                    #                 'old mem acc: {:.3f}  num {:d} '
+                    #                 'new mem acc: {:.3f} num {:d}  '
+                    #                 .format(i,
+                    #                         stats_dict["loss_mem_old"],
+                    #                         stats_dict["old_task_num"],
+                    #                         stats_dict["loss_mem_new"],
+                    #                         stats_dict["new_task_num"],
+                    #                         )
+                    #         )
 
-                                        )
-                        )
-                        if ("correct_cnt_mem_new" in stats_dict):
-                            print(
-                                '==>>> it: {},  '
-                                    'old mem acc: {:.3f}  num {:d} '
-                                    'new mem acc: {:.3f} num {:d}  '
-                                    .format(i,
-                                            stats_dict["loss_mem_old"],
-                                            stats_dict["old_task_num"],
-                                            stats_dict["loss_mem_new"],
-                                            stats_dict["new_task_num"],
-                                            )
-                            )
 
-
-            # if(self.params.use_tmp_buffer):
-            #     self.tmp_buffer.update_true_buffer()
+            if(self.params.use_tmp_buffer):
+                self.memory_manager.tmp_buffer.update_true_buffer()
 
         self.after_train()
 

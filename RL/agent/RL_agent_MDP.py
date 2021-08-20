@@ -36,9 +36,15 @@ class RL_memIter_agent(object):
                           "core50":10000,
                           "cifar10":5000}
 
-        self.total_training_steps = params.num_runs * training_steps_dict[params.data]  # params['train_steps_total'] #None #
 
-        self.training_steps = 0
+
+
+        self.total_training_steps = params.num_runs * training_steps_dict[params.data]  # params['train_steps_total'] #None #
+        if(self.params.save_prefix == "non_stationary"):
+            self.total_training_steps = int(self.total_training_steps)/params.num_tasks
+            print("!!!total training steps",self.total_training_steps)
+        self.RL_running_steps = 0
+        self.RL_agent_update_steps=0
         self.RL_training_iters = params.critic_training_iters
 
         self.ExperienceReplayObj = RL_ExperienceReplay(params)
@@ -49,7 +55,7 @@ class RL_memIter_agent(object):
         if (params.RL_type == "RL_ratio"):
             # self.action_design_space = np.linspace(0.1,2,10)
             self.action_design_space = np.linspace(0, 2, 10)
-            print("action space", self.action_design_space)
+            #print("action space", self.action_design_space)
 
         elif (params.RL_type == "RL_memIter"):
             self.action_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
@@ -62,30 +68,56 @@ class RL_memIter_agent(object):
             for i in range(len(self.mem_design_space)):
                 for j in range(len(self.ratio_design_space)):
                     self.action_design_space.append((self.mem_design_space[i], self.ratio_design_space[j]))
-        elif (params.RL_type == "RL_2ratioMemIter"):
+        elif(  params.RL_type == "RL_actor"):
+            self.agent_params = {}
+            self.agent_params['ac_dim']=1
+
+            self.action_design_space = []
+        elif (params.RL_type == "RL_2ratioMemIter"  ):
             self.mem_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
             # self.mem_ratio_design_space = [0.0,0.1,0.5,1.0,1.5]
             # self.incoming_ratio_design_space = [0.0, 0.1, 0.5, 1.0, 1.5]
-            if (params.action_space_type == "sparse"):
-                self.mem_ratio_design_space = [0.1, 0.5, 1.0, ]
-                self.incoming_ratio_design_space = [0.1, 0.5, 1.0, ]
-            elif (params.action_space_type == "medium"):
-                self.mem_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
-                self.incoming_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
+            if(params.action_space_type == "posneu"):
+                self.action_design_space=[(3,0.1,0.1),
+                                          (3,0.1,0.5),
+                                          (3,0.1,1),
+                                          (3,0.5,0.5),
+                                          (3,0.5,1),
+                                          (3,1,1)]
+                return self.action_design_space
+            else:
+                if (params.action_space_type == "sparse"):
+                    self.mem_ratio_design_space = [0.1, 0.5, 1.0, ]
+                    self.incoming_ratio_design_space = [0.1, 0.5, 1.0, ]
+                elif (params.action_space_type == "ionly"):
+                    self.mem_ratio_design_space = [ 1.0, ]
+                    self.incoming_ratio_design_space = [0.1, 0.5, 1.0,1.5 ]
+                elif (params.action_space_type == "ionly_dense"):
+                    self.mem_ratio_design_space = [ 1.0, ]
+                    self.incoming_ratio_design_space = [0.1,0.2,0.3, 0.5,0.75, 1.0,1.2,1.5 ]
+                elif (params.action_space_type == "monly_dense"):
+                    self.incoming_ratio_design_space = [ 1.0, ]
+                    self.mem_ratio_design_space = [0.1,0.2,0.3, 0.5,0.75, 1.0,1.2,1.5 ]
+                elif (params.action_space_type == "medium"):
+                    self.mem_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
+                    self.incoming_ratio_design_space = [0.01,0.1, 0.5, 1.0, ]
+                elif (params.action_space_type == "upper"):
+                    self.mem_ratio_design_space = [0.1, 0.5, 1.0, 1.5]
+                    self.incoming_ratio_design_space = [0.1, 0.5, 1.0, 1.5]
 
-            elif (params.action_space_type == "dense"):
-                self.mem_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
-                self.incoming_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
+                elif (params.action_space_type == "dense"):
+                    self.mem_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
+                    self.incoming_ratio_design_space = [0.1, 0.25, 0.5, 0.75, 1.0, ]
 
 
-            self.action_design_space = []
-            if (params.dynamics_type == "same_batch"):
-                self.action_design_space.append((0, 0, 0))
-            for i in range(0, len(self.mem_design_space)):
-                for j in range(len(self.mem_ratio_design_space)):
-                    for k in range(len(self.incoming_ratio_design_space)):
-                        self.action_design_space.append((self.mem_design_space[i], self.incoming_ratio_design_space[k],
-                                                         self.mem_ratio_design_space[j]))
+                self.action_design_space = []
+                if (params.dynamics_type == "same_batch"):
+                    self.action_design_space.append((0, 0, 0))
+                for i in range(0, len(self.mem_design_space)):
+                    for j in range(len(self.mem_ratio_design_space)):
+                        for k in range(len(self.incoming_ratio_design_space)):
+                            self.action_design_space.append((self.mem_design_space[i], self.incoming_ratio_design_space[k],
+                                                             self.mem_ratio_design_space[j]))
         elif (params.RL_type == "RL_adpRatio"):
             self.action_design_space = [0.01, 0.1, 0.5, 1.0, ]
         elif (params.RL_type == "RL_ratio_1para"):
@@ -127,13 +159,26 @@ class RL_memIter_agent(object):
             "same_batch":6,
             "sam_batch_7_dim":7,
             "new_old2":2,
+            "new_old3": 3,
             "new_old4": 4,
+            "new_old_old": 3,
+            "new_old_old4": 4,
+            "new_old_old4_noi": 3,
             "new_old5": 5,
+            "new_old5_overall":5,
+            "new_old6_overall_train":6,
+            "new_old7_overall_train_income":7,
+            "new_old5_scale": 5,
+            "new_old5_4time":20,
+            "new_old5_incoming":6,
+            "new_old5_task": 5+self.params.num_tasks,
             "new_old5t": 5,
             "new_old6": 6,
             "new_old6m": 6,
             "new_old6mn": 6,
+            "new_old6mn_org":6,
             "new_old6mnt": 7,
+            "new_old6mn_incoming": 7,
             "new_old7": 7,
             "new_old9": 9,
             "new_old11": 1,

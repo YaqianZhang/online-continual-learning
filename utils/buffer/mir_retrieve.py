@@ -11,6 +11,30 @@ class MIR_retrieve(object):
         self.params = params
         self.subsample = params.subsample
         self.num_retrieve = params.eps_mem_batch
+        self.incoming_influence = None
+
+    def compute_incoming_influence(self, buffer, **kwargs):
+
+        sub_x, sub_y, mem_indices = random_retrieve(buffer, self.subsample,  return_indices=True)
+        #sub_x, sub_y = random_retrieve(buffer, self.subsample)
+        grad_dims = []
+        for param in buffer.model.parameters():
+            grad_dims.append(param.data.numel())
+        grad_vector = get_grad_vector(buffer.model.parameters, grad_dims)
+        model_temp = self.get_future_step_parameters(buffer.model, grad_vector, grad_dims)
+        if sub_x.size(0) > 0:
+            with torch.no_grad():
+                logits_pre = buffer.model.forward(sub_x)
+                logits_post = model_temp.forward(sub_x)
+                pre_loss = F.cross_entropy(logits_pre, sub_y, reduction='none')
+                post_loss = F.cross_entropy(logits_post, sub_y, reduction='none')
+                scores = post_loss - pre_loss
+                self.incoming_influence = torch.mean(scores)
+               # big_ind = scores.sort(descending=True)[1][:self.num_retrieve]
+                #buffer.update_replay_times(mem_indices[big_ind])
+            return self.incoming_influence
+        else:
+            raise NotImplementedError("MIR random subsample number is 0",sub_x.size(0))
 
     def retrieve(self, buffer, **kwargs):
         sub_x, sub_y, mem_indices = random_retrieve(buffer, self.subsample, return_indices=True)
@@ -27,6 +51,7 @@ class MIR_retrieve(object):
                 pre_loss = F.cross_entropy(logits_pre, sub_y, reduction='none')
                 post_loss = F.cross_entropy(logits_post, sub_y, reduction='none')
                 scores = post_loss - pre_loss
+                self.incoming_influence = torch.mean(scores)
                 big_ind = scores.sort(descending=True)[1][:self.num_retrieve]
                 buffer.update_replay_times(mem_indices[big_ind])
             return sub_x[big_ind], sub_y[big_ind]

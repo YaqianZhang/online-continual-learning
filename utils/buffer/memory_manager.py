@@ -45,6 +45,8 @@ class memory_manager_class(object):
             self.test_buffer = Test_Buffer(params, )
         self.buffer = Buffer(self.model, params)
         self.buffer_add = Buffer(self.model, params)
+    def compute_incoming_influence(self,incoming_x,incoming_y):
+        return self.buffer.compute_incoming_influence(x=incoming_x,y=incoming_y)
 
 
     def retrieve_from_mem(self,batch_x, batch_y,task_seen):
@@ -100,6 +102,8 @@ class memory_manager_class(object):
         self.test_buffer.update(batch_x[:test_size], batch_y[:test_size])
 
         return batch_x[test_size:], batch_y[test_size:]
+    def reset_new_old(self):
+        self.buffer.buffer_new_old = torch.LongTensor(self.buffer.buffer_size).fill_(0)
 
     def update_memory(self, batch_x, batch_y):
         # save some parts of batch_x and batch_y into the memory

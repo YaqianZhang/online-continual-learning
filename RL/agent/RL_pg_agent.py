@@ -8,25 +8,35 @@ class RL_pg_agent(RL_memIter_agent):
     def __init__(self,params):
         super().__init__(params)
 
+        # self.actor = MLPPolicy(
+        #     self.agent_params['ac_dim'],
+        #     self.agent_params['ob_dim'],
+        #     self.agent_params['n_layers'],
+        #     self.agent_params['size'],
+        #     discrete=self.agent_params['discrete'],
+        #     learning_rate=self.agent_params['learning_rate'],
+        #     nn_baseline=self.agent_params['nn_baseline']
+        # )
         self.actor = MLPPolicy(
             self.agent_params['ac_dim'],
-            self.agent_params['ob_dim'],
-            self.agent_params['n_layers'],
-            self.agent_params['size'],
-            discrete=self.agent_params['discrete'],
-            learning_rate=self.agent_params['learning_rate'],
-            nn_baseline=self.agent_params['nn_baseline']
+            self.ob_dim,
+            2,
+            32,
+            discrete=False,
+            learning_rate=1e-5,
+            nn_baseline=False
         )
 
     def sample_action(self,state):
         action = self.actor.get_action(state)
+        self.real_action_list.append(action)
         return action
 
     def update_agent(self, reward, state, action, next_state, done, ):
         if (self.params.RL_type == "DormantRL"):
             return
         self.real_reward_list.append(reward)
-        self.training_steps += 1
+
         ## DQN
 
         # ## add <state, action, reward, next_state> into memory
@@ -36,21 +46,20 @@ class RL_pg_agent(RL_memIter_agent):
 
         if (self.ExperienceReplayObj.can_sample() == False):
             return
-        if (self.training_steps < self.critic_training_start): return
         for i in range(self.RL_training_iters):
             state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.ExperienceReplayObj.sample(
                 self.ER_batchsize)
             state_batch = maybe_cuda(torch.from_numpy(state_batch))
+            # print(action_batch)
             action_batch = maybe_cuda(torch.from_numpy(action_batch))
             reward_batch = maybe_cuda(torch.from_numpy(reward_batch))
             next_state_batch = maybe_cuda(torch.from_numpy(next_state_batch))
             done_batch = maybe_cuda(torch.from_numpy(done_batch))
-            rl_loss = self.train_batch(state_batch, action_batch, reward_batch, next_state_batch, done_batch)
+
+
+            rl_loss = self.actor.train_batch(state_batch, action_batch, reward_batch, next_state_batch, done_batch)
 
         self.mse_training_loss.append(rl_loss.item())
-
-        if (self.params.reward_type[:10] == "multi-step" and self.training_steps % self.update_q_target_freq == 0):
-            self.update_q_target()
 
     def save_RL_stats(self, prefix):
         arr = np.array(self.mse_training_loss)

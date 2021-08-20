@@ -26,6 +26,7 @@ class Tmp_Buffer(torch.nn.Module):
 
 
     def tmp_store(self,batch_x,batch_y):
+
         new_num = batch_x.size(0)
         self.tmp_x[self.current_n:self.current_n+new_num]=batch_x
         self.tmp_y[self.current_n:self.current_n+new_num]=batch_y
@@ -42,12 +43,14 @@ class Tmp_Buffer(torch.nn.Module):
 
 
     def update_true_buffer(self):
-        idx_buffer = torch.FloatTensor(self.current_n).to(self.tmp_x.device).uniform_(0, self.params.mem_size).long()
+        #idx_buffer = torch.FloatTensor(self.current_n).to(self.tmp_x.device).uniform_(0, self.params.mem_size).long()
+        idx_buffer = torch.FloatTensor(self.current_n).uniform_(0, self.params.mem_size).long()
+
         idx_new_data = torch.range(0,self.current_n)
 
         idx_map = {idx_buffer[i].item(): idx_new_data[i].item() for i in range(idx_buffer.size(0))}
-
-        self.buffer.overwrite(idx_map, self.tmp_x, self.tmp_y)
+        print(self.tmp_x.device,self.tmp_y.device,idx_buffer.device,idx_new_data.device)
+        self.buffer.overwrite(idx_map, self.tmp_x.cpu(), self.tmp_y.cpu())
         # print("to be store",self.tmp_y[self.current_n])
         # print("buffer indices",idx_buffer)
         # print("after replacement",self.buffer.buffer_label[idx_buffer])

@@ -36,6 +36,7 @@ class BasicBlock(nn.Module):
         out = relu(out)
         return out
 
+
     def init_normal(m):
         if type(m) == nn.Linear:
             nn.init.uniform_(m.weight)
@@ -113,6 +114,22 @@ class ResNet(nn.Module):
         return x
 
     def forward(self, x):
+        out = self.features(x)
+        logits = self.logits(out)
+        return logits
+
+    def forward_with_weights(self, x, weights):
+        i=0
+        for p in enumerate(self.parameters()):
+            print(p,weights[i])
+            assert False
+            # p = weights[i]
+            # i +=1
+
+        # for w in weights:
+        #     print(w)
+        #     self.model.linear.weight.data[self.old_labels, :]
+        #assert False
         out = self.features(x)
         logits = self.logits(out)
         return logits

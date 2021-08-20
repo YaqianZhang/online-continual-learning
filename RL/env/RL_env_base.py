@@ -19,10 +19,19 @@ class Base_RL_env(object):
 
         self.reward_list = []
         self.task_reward_list=[]
+        self.influence_score_list=[]
+
+        self.task_vec = [0]*params.num_tasks
+
+    def one_hot(self,task_id):
+        self.task_vec = [0]*self.params.num_tasks
+        self.task_vec[task_id]=1
+        return self.task_vec
+
 
     def get_state(self, stats_dict, state_feature_type=None,task_seen=None):
 
-        i = stats_dict['batch_num']
+        #i = stats_dict['batch_num']
         # [correct_cnt_incoming, correct_cnt_mem,
         #  loss_incoming_value, loss_mem_value, correct_cnt_test_mem,loss_test_value, ] = [
         #     stats_dict['correct_cnt_incoming'],stats_dict['correct_cnt_mem'],
@@ -58,14 +67,43 @@ class Base_RL_env(object):
             #               "loss_mem_new": loss_mem_new,
             #                    "old_task_num":len(y_old),
             #                    "new_task_num":len(y_new)})
+        elif(state_feature_type == "new_old3"):
+            list_data = [i,
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]]
         elif(state_feature_type == "new_old4"):
             list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]
                          ]
-        elif (state_feature_type == "new_old5"):
+        elif(state_feature_type == "new_old5_overall"):
+            list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"],stats_dict['loss_test_value']
+                         ]
+        elif(state_feature_type == "new_old6_overall_train"):
+            list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"],stats_dict["loss_mem_new"],
+                         stats_dict['loss_test_value'],stats_dict['loss_mem_value'],
+                         ]
+        elif (state_feature_type == "new_old7_overall_train_income"):
+            list_data = [stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                         stats_dict['loss_test_value'], stats_dict['loss_mem_value'],
+                         stats_dict['loss_incoming_value'],
+                         ]
+
+        elif (state_feature_type == "new_old5" or state_feature_type == "new_old5_4time"):
             list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
                      ]
+        elif (state_feature_type == "new_old5_scale"):
+            list_data = [i/250, stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
+                         ]
+        elif (state_feature_type == "new_old5_task"):
+            task_vec = self.one_hot(task_seen)
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
+                     ]
+            list_data = list_data + task_vec
 
 
         elif (state_feature_type == "new_old7"):
@@ -74,15 +112,46 @@ class Base_RL_env(object):
                          stats_dict["correct_cnt_incoming"],stats_dict["loss_incoming_value"],
 
                          ]
+        elif (state_feature_type == "new_old_old" ):
+            list_data = [i,stats_dict["correct_cnt_mem_old"],
+                     stats_dict["loss_mem_old"],
+                     ]
+        elif (state_feature_type == "new_old_old4" ):
+            list_data = [i,stats_dict["correct_cnt_mem_old"],
+                     stats_dict["loss_mem_old"],
+                         stats_dict["loss_mem_new"],
+                     ]
+        elif (state_feature_type == "new_old_old4_noi" ):
+            list_data = [stats_dict["correct_cnt_mem_old"],
+                     stats_dict["loss_mem_old"],
+                         stats_dict["loss_mem_new"],
+                     ]
 
-        elif (state_feature_type == "new_old6mn"):
+        elif (state_feature_type == "new_old6mn" or state_feature_type == "new_old6mn_org" ):
+            i = self.CL_agent.incoming_batch['batch_num']
             list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
                      stats_dict["train_loss_old"],]
+
         elif (state_feature_type == "new_old6mnt"):
             list_data = [i,task_seen,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
                      stats_dict["train_loss_old"],]
+
+        elif(state_feature_type == "new_old5_incoming"):
+            influence_score = self.CL_agent.compute_incoming_influence().cpu()
+            self.influence_score_list.append(influence_score)
+            #print("influence score",influence_score)
+            list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                     stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                     influence_score]
+        # elif(state_feature_type == "new_old6mn_incoming"):
+        #     influence_score = self.CL_agent.compute_incoming_influence().cpu()
+        #     #print("influence score",influence_score)
+        #     list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+        #              stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+        #              stats_dict["train_loss_old"],influence_score]
+
         elif (state_feature_type == "new_old6m"):
             list_data = [i,
                          stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
@@ -132,7 +201,9 @@ class Base_RL_env(object):
 
 
     def get_reward(self,next_stats,prev_stats,):
-        i= next_stats['batch_num']
+
+
+        #i= next_stats['batch_num']
 
         # correct_cnt_test_mem_prev = prev_stats["correct_cnt_test_mem"]
         # [correct_cnt_incoming, correct_cnt_mem,correct_cnt_test_mem,] = [
@@ -149,11 +220,20 @@ class Base_RL_env(object):
             reward = correct_cnt_mem#next_state[0, 1].numpy()
         elif(self.params.reward_type == "test_acc"):
 
-            reward = next_stats['correct_cnt_test_mem']
+            reward = next_stats['correct_cnt_test_mem']-1
+        elif (self.params.reward_type == "test_loss_old"):
+            reward = -next_stats['loss_mem_old']
         elif (self.params.reward_type == "test_acc_rlt"):
             reward = (correct_cnt_test_mem - correct_cnt_test_mem_prev)
         elif(self.params.reward_type == "test_loss"):
             reward = -next_stats['loss_test_value']
+        elif(self.params.reward_type == "test_loss_median"):
+            reward = -next_stats['loss_median']
+        elif(self.params.reward_type == "test_loss_acc"):
+            reward = -next_stats['loss_test_value']+next_stats['correct_cnt_test_mem']
+        elif (self.params.reward_type == "test_alpha01_loss_acc"):
+            reward = -0.1*next_stats['loss_test_value'] + next_stats['correct_cnt_test_mem']
+
         elif(self.params.reward_type == "test_loss_rlt"):
             reward = prev_stats['loss_test_value']-next_stats['loss_test_value']
 
@@ -205,7 +285,7 @@ class Base_RL_env(object):
             pass
         else:
             raise NotImplementedError("undefined reward test type ", self.params.reward_test_type)
-        reward = reward - self.params.reward_rg * np.abs(next_stats['loss_mem_value']-next_stats['loss_test_value'])#action_mem_iter
+        #reward = reward - self.params.reward_rg * np.abs(next_stats['loss_mem_value']-next_stats['loss_test_value'])#action_mem_iter
         return reward
 
     def update_task_reward(self):
@@ -215,6 +295,9 @@ class Base_RL_env(object):
 
         arr = np.array(self.task_reward_list)
         np.save(prefix + "task_reward_list.npy", arr)
+
+        arr = np.array(self.influence_score_list)
+        np.save(prefix + "influence_score_list).npy", arr)
 
 
 

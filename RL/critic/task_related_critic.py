@@ -59,10 +59,6 @@ class critic_class(object):
 
 
         return self.q_function, self.q_function_target
-    def reset_parameters(self):
-        torch.nn.init.kaiming_normal(self.q_function.weight)
-        if self.bias is not None:
-            self.bias.data.zero_()
 
     def load_critic_model(self, model):
         print("!!! load pre-trained model")
@@ -77,10 +73,6 @@ class critic_class(object):
 
         checkpoint = torch.load(PATH)
         model.load_state_dict(checkpoint)
-    def get_parameters(self):
-        return self.q_function.parameters()
-    def compute_q(self,obs):
-        return self.q_function(obs)
     def initialize_q(self):
         print("initialize q")
         self.initialize_critic(self.params, self.action_num, self.ob_dim)
@@ -119,15 +111,12 @@ class critic_class(object):
             td_target = reward_batch
 
         td_target = td_target.float()
-        #print("train batch",)
 
 
         n = state_batch.shape[0]
         #print(self.RL_agent.ER_batchsize, n)
-        q_values = self.compute_q(state_batch)
 
-        predict_q = q_values[torch.arange(n), action_batch].float()
-
+        predict_q = self.q_function(state_batch)[torch.arange(n), action_batch].float()
         td_target = maybe_cuda(td_target)
 
         assert predict_q.shape == td_target.shape
@@ -136,13 +125,13 @@ class critic_class(object):
 
         # rl_loss = torch.nn.SmoothL1Loss()(predict_q, td_target )
 
-        rl_opt = torch.optim.Adam(self.get_parameters(),
+        rl_opt = torch.optim.Adam(self.q_function.parameters(),
                                   lr=self.rl_lr.value(training_steps),
                                   weight_decay=self.rl_wd)
 
         rl_opt.zero_grad()
         rl_loss.backward()
-        torch.nn.utils.clip_grad_value_(self.get_parameters(), self.grad_norm_clipping)
+        torch.nn.utils.clip_grad_value_(self.q_function.parameters(), self.grad_norm_clipping)
         if(self.params.RL_agent_update_flag):
             rl_opt.step()
         #print("train RL, loss", rl_loss.item())

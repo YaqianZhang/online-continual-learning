@@ -3,8 +3,8 @@ from utils import name_match #import update_methods, retrieve_methods
 from utils.utils import maybe_cuda
 import torch
 import numpy as np
-from utils.buffer.buffer_utils import BufferClassTracker
-from utils.setup_elements import n_classes
+
+
 
 class Buffer(torch.nn.Module):
     def __init__(self, model, params,RL_agent=None, RL_env=None):
@@ -14,8 +14,9 @@ class Buffer(torch.nn.Module):
         self.cuda = self.params.cuda
         self.current_index = 0
         self.n_seen_so_far = 0
+
         self.buffer_used_steps = 0
-        self.device = "cuda" if self.params.cuda else "cpu"
+
 
         # define buffer
         buffer_size =params.mem_size

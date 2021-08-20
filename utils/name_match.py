@@ -11,6 +11,7 @@ from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
 from agents.lwf import Lwf
 from agents.icarl import Icarl
+from agents.lamaml import LAMAML
 from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
 #from utils.buffer.replay_times_update import Replay_times_update
@@ -33,6 +34,7 @@ data_objects = {
 agents = {
     'ER': ExperienceReplay,
     'RLER':RL_ExperienceReplay,
+    'LAMAML':LAMAML,
     'EWC': EWC_pp,
     'AGEM': AGEM,
     'CNDPM': Cndpm,

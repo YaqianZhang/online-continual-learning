@@ -48,6 +48,21 @@ def load_task_with_labels(x, y, labels):
     idx = np.concatenate(tmp, axis=None)
     return x[idx], y[idx]
 
+def load_task_with_labels_correct(x, y, labels):
+    idx = []
+    for i,y_sample in enumerate(y):
+        if(y_sample in labels):
+            idx.append(i)
+    return x[idx],y[idx]
+
+    # idx = y==labels
+    # return x[idx],y
+    # tmp = []
+    # for i in labels:
+    #     tmp.append((np.where(y == i)[0]))
+    # idx = np.concatenate(tmp, axis=None)
+    # return x[idx], y[idx]
+
 
 
 class dataset_transform(data.Dataset):

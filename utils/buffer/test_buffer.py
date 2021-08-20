@@ -19,7 +19,7 @@ class Test_Buffer(torch.nn.Module):
         self.training_steps = 0
 
         # define buffer
-        self.buffer_size = 300#int( params.test_mem_size)
+        self.buffer_size = params.test_mem_size
         print('test buffer has %d slots' % self.buffer_size)
         self.input_size = input_size_match[params.data]
         print("test buffer"+str(self.buffer_size))

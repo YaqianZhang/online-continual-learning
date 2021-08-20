@@ -1,6 +1,7 @@
 import torch
 
 
+
 class Reservoir_update(object):
     def __init__(self, params):
         super().__init__()
@@ -40,16 +41,11 @@ class Reservoir_update(object):
 
             # everything was added
             if offset == x.size(0):
-                filled_idx = list(range(buffer.current_index - offset, buffer.current_index, ))
-                if buffer.params.buffer_tracker:
-                    buffer.buffer_tracker.update_cache(buffer.buffer_label, y[:offset], filled_idx)
-                return filled_idx
-
-
-        #TODO: the buffer tracker will have bug when the mem size can't be divided by batch size
+                return list(range(buffer.current_index, buffer.current_index + offset))
 
         # remove what is already in the buffer
         x, y = x[place_left:], y[place_left:]
+
 
         indices = torch.FloatTensor(x.size(0)).to(x.device).uniform_(0, buffer.n_seen_so_far).long()
         valid_indices = (indices < buffer.buffer_img.size(0)).long()
