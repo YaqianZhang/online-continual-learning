@@ -1,5 +1,5 @@
 import torch
-from models.resnet import Reduced_ResNet18
+from models.resnet import ResNet18,Reduced_ResNet18,SupConResNet
 from models.pretrained import ResNet18_pretrained
 from torchvision import transforms
 import torch.nn as nn
@@ -13,6 +13,7 @@ input_size_match = {
     'cifar100': [3, 32, 32],
     'cifar10': [3, 32, 32],
     'core50': [3, 128, 128],
+'clrs25': [3, 128,128],#[3, 256, 256],
     'mini_imagenet': [3, 84, 84],
     'openloris': [3, 50, 50]
 }
@@ -22,6 +23,7 @@ n_classes = {
     'cifar100': 100,
     'cifar10': 10,
     'core50': 50,
+    'clrs25':25,
     'mini_imagenet': 100,
     'openloris': 69
 }
@@ -31,6 +33,9 @@ transforms_match = {
     'core50': transforms.Compose([
         transforms.ToTensor(),
         ]),
+    'clrs25': transforms.Compose([
+        transforms.ToTensor(),
+    ]),
     'cifar100': transforms.Compose([
         transforms.ToTensor(),
         ]),
@@ -46,11 +51,26 @@ transforms_match = {
 
 def setup_architecture(params):
     nclass = n_classes[params.data]
+
+    if params.agent in ['SCR','SCR_META', 'SCP']:
+        if params.data == 'mini_imagenet':
+            return SupConResNet(640, head=params.head)
+        if params.data == 'clrs25':
+            return SupConResNet(2560, head=params.head)
+        if params.data == 'core50':
+            return SupConResNet(2560, head=params.head)
+
+
+        return SupConResNet(head=params.head)
     if params.agent == 'CNDPM':
         from models.ndpm.ndpm import Ndpm
         return Ndpm(params)
     if params.data == 'cifar100':
         return Reduced_ResNet18(nclass)
+    elif params.data == 'clrs25':
+        model = Reduced_ResNet18(nclass)
+        model.linear = nn.Linear(2560, nclass, bias=True)
+        return model
     elif params.data == 'cifar10':
         return Reduced_ResNet18(nclass)
     elif params.data == 'core50':
@@ -63,6 +83,8 @@ def setup_architecture(params):
         return model
     elif params.data == 'openloris':
         return Reduced_ResNet18(nclass)
+    else:
+        raise NotImplementedError("undefined dataset",params.data)
 
 
 def setup_opt(optimizer, model, lr, wd):

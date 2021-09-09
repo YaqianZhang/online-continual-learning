@@ -16,17 +16,48 @@ from RL.evaluator import evaluator
 import torch
 
 
+
+
 def get_prefix(params,run):
     trick = ""
+    if(params.agent[:3]=="SCR"):
+        trick+= "temp"+str(params.temp)+"_"
     if(params.only_task_seen):
         trick+="onlySeen_"
-    if(params.cut_mix):
-        trick+="da_"
+    if(params.online_hyper_tune):
+        trick += "hp"+str(params.online_hyper_freq)+"_"
+    else:
+        if (params.learning_rate != 0.1):
+            trick += "lr" + str(params.learning_rate) + "_"
     if(params.frozen_old_fc):
         trick+="frz_"
+    if(params.lambda_ != 100):
+        trick += str(params.lambda_)
+
 
     if (params.nmc_trick):
         trick += "NMC_"
+    if (params.use_test_buffer):
+        trick += "tbuf_"
+    if (params.softmax_type != 'None'):
+        trick += "softmax"+str(params.softmax_nsize) \
+    +str(params.softmax_nlayers)
+        if(params.softmax_membatch != 100):
+            trick += str(params.softmax_membatch)
+        if(params.softmax_dropout):
+            trick += "dp"
+        trick+="_"
+        if(params.softmaxhead_lr != 0.1):
+            trick +="smlr"+str(params.softmaxhead_lr) +"_"
+
+    if (params.do_cutmix):
+        trick += "cmix_"
+    if (params.no_aug):
+        trick += "noaug_"
+    if(params.aug_type != ""):
+        trick += params.aug_type
+    if (params.single_aug):
+        trick += "saug_"
     if (params.use_tmp_buffer):
         trick += "tmpMem_"
     if(params.dyna_mem_iter != "None"):
@@ -59,12 +90,16 @@ def get_prefix(params,run):
 
     ### Rl related
     if (params.RL_type != 'NoRL'):
+        if(params.temperature_scaling):
+            trick  += "TS_"
         if(params.test_mem_size != 300):
             trick += "tmem"+str(params.test_mem_size)+"_"
         if((params.RL_agent_update_flag==False)):
             trick +="NoT"+"_"
         if(params.actor_type == "random"):
             trick += "rndRL_"
+        if(params.q_function_type != "lstm"):
+            trick += "q"+params.q_function_type[:3]+"_"
 
         if (params.test_mem_batchSize > 10):
             trick += "testBch" + str(params.test_mem_batchSize)+"_"
@@ -93,6 +128,9 @@ def get_prefix(params,run):
         trick += params.rl_exp_type+"_"
         if(params.dynamics_type == "next_batch"):
             trick+="nxtBtch"+'_'
+        if(params.update_q_target_freq != 1000):
+            trick+="targetq"+str(params.update_q_target_freq)
+
         if (params.dynamics_type == "within_batch"):
             trick += "wthBtch" + '_'
         trick += str(params.task_start_mem_ratio)+str(params.task_start_incoming_ratio)+"_"
@@ -107,7 +145,7 @@ def get_prefix(params,run):
 
         ##critic_training
 
-        # trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
+        trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
         # trick += "ERbch"+str(params.ER_batch_size)+"_"
         if(params.reward_type == "multi-step"):
             trick += "Done"+str(params.done_freq)+"_"
@@ -115,7 +153,8 @@ def get_prefix(params,run):
             trick +="rllr"+params.critic_lr_type+"_"
         if(params.critic_wd >0):
             trick +="wd-6"+"_"
-
+        if(params.critic_lr != 1e-3):
+            trick += str(params.critic_lr)
         # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
         if(params.critic_training_iters != 1):
             trick += "crtitr" + str(params.critic_training_iters) + "_"
@@ -136,6 +175,7 @@ def get_prefix(params,run):
         trick += params.save_prefix+"_"
     if (not params.save_prefix_tmp == ""):
         trick += params.save_prefix_tmp+"_"
+    trick += params.save_prefix_tmp2 + "_"
     if( not params.eps_mem_batch == 10):
         trick += "memBch"+str(params.eps_mem_batch)+"_"
     if(params.num_runs>1):
@@ -164,8 +204,20 @@ def get_prefix(params,run):
     print("save file name :"+ prefix)
 
     return prefix
+def save_stats_acc(params,accuracy_list,run=1,loss_list=[]):
+    prefix = "results/"+str(params.seed) + "/" +params.exp_name+"_"+params.agent+"_"+params.data+"_"+ "tune"
+
+
+
+
+    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
+    np.save(prefix + "accuracy_list.npy", accuracy_list)
+    np.save(prefix + "loss_list.npy", loss_list)
+
+
 
 def save_stats(params,agent,model,accuracy_list,run=1,loss_list=[]):
+
     prefix = get_prefix(params,run)
 
 
@@ -419,7 +471,7 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
                 print("----------run {} training batch {}-------------".format(run, i))
                 print('size: {}, {}'.format(x_train.shape, y_train.shape))
                 agent.train_learner(x_train, y_train)
-                acc_array = agent.evaluate(test_loaders)
+                acc_array,loss_array = agent.evaluate(test_loaders)
                 tmp_acc.append(acc_array)
 
         run_end = time.time()
@@ -427,6 +479,7 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
+        save_stats_acc(defaul_params, agent, model, accuracy_list)
 
         #store result
         result_dict = {'Run': run}
@@ -457,6 +510,7 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
 
 def multiple_run_tune_separate(default_params, tune_params, save_path):
     # Set up data stream
+    print("~~~~~~~~ run tune seperate")
     start = time.time()
     print('Setting up data stream')
     data_continuum = continuum(default_params.data, default_params.cl_type, default_params)
@@ -499,6 +553,7 @@ def multiple_run_tune_separate(default_params, tune_params, save_path):
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
+        save_stats_acc(default_params, accuracy_list)
 
     end = time.time()
     accuracy_array = np.array(accuracy_list)
@@ -617,6 +672,7 @@ def single_tune_train_val(data_continuum, default_params, tune_params, params_ke
             agent.train_learner(x_train, y_train)
             acc_array = agent.evaluate(test_loaders_full)
             tmp_acc.append(acc_array)
+
     else:
         x_train_offline = []
         y_train_offline = []

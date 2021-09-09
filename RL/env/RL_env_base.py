@@ -30,6 +30,9 @@ class Base_RL_env(object):
 
 
     def get_state(self, stats_dict, state_feature_type=None,task_seen=None):
+        # state_def_dict={
+        #
+        # }
 
         #i = stats_dict['batch_num']
         # [correct_cnt_incoming, correct_cnt_mem,
@@ -74,7 +77,7 @@ class Base_RL_env(object):
             list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]
                          ]
-        elif(state_feature_type == "new_old5_overall"):
+        elif(state_feature_type == "new_old5_overall" or state_feature_type == "new_old5_4time"):
             list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"],stats_dict['loss_test_value']
                          ]
@@ -83,6 +86,13 @@ class Base_RL_env(object):
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"],
                          stats_dict['loss_test_value'],stats_dict['loss_mem_value'],
                          ]
+        elif (state_feature_type == "new_old7_overall_train"):
+            list_data = [stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
+                         stats_dict['loss_test_value'],
+                         stats_dict['train_acc'],
+                         stats_dict['train_loss'],
+                         ]
         elif (state_feature_type == "new_old7_overall_train_income"):
             list_data = [stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"], stats_dict["loss_mem_new"],
@@ -90,7 +100,7 @@ class Base_RL_env(object):
                          stats_dict['loss_incoming_value'],
                          ]
 
-        elif (state_feature_type == "new_old5" or state_feature_type == "new_old5_4time"):
+        elif (state_feature_type == "new_old5" ):
             list_data = [i,stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
                      stats_dict["loss_mem_old"], stats_dict["loss_mem_new"]
                      ]
@@ -201,81 +211,85 @@ class Base_RL_env(object):
 
 
     def get_reward(self,next_stats,prev_stats,):
+        reward_def_dict={
+            "test_acc":next_stats['correct_cnt_test_mem']-1,
+            "test_loss":-next_stats['loss_test_value'],
+            "test_acc_rlt":next_stats['correct_cnt_test_mem']-prev_stats["correct_cnt_test_mem"],
+            "test_loss_rlt":prev_stats['loss_test_value']-next_stats['loss_test_value']
 
-
-        #i= next_stats['batch_num']
-
-        # correct_cnt_test_mem_prev = prev_stats["correct_cnt_test_mem"]
-        # [correct_cnt_incoming, correct_cnt_mem,correct_cnt_test_mem,] = [
-        #     next_stats['correct_cnt_incoming'],next_stats['correct_cnt_mem'], next_stats['correct_cnt_test_mem'],]
-
-        # if(i==0):
-        #     self.episode_start_test_acc = 100*correct_cnt_test_mem
-        #     self.episode_start_test_loss = 100 * next_stats['loss_test_value']
-        #     print("### i = 0 episode start",self.episode_start_test_acc)
-
-        if(self.params.reward_type == "incoming_acc"):
-            reward = correct_cnt_incoming#next_state[0,0].numpy()
-        elif(self.params.reward_type == "mem_acc"):
-            reward = correct_cnt_mem#next_state[0, 1].numpy()
-        elif(self.params.reward_type == "test_acc"):
-
-            reward = next_stats['correct_cnt_test_mem']-1
-        elif (self.params.reward_type == "test_loss_old"):
-            reward = -next_stats['loss_mem_old']
-        elif (self.params.reward_type == "test_acc_rlt"):
-            reward = (correct_cnt_test_mem - correct_cnt_test_mem_prev)
-        elif(self.params.reward_type == "test_loss"):
-            reward = -next_stats['loss_test_value']
-        elif(self.params.reward_type == "test_loss_median"):
-            reward = -next_stats['loss_median']
-        elif(self.params.reward_type == "test_loss_acc"):
-            reward = -next_stats['loss_test_value']+next_stats['correct_cnt_test_mem']
-        elif (self.params.reward_type == "test_alpha01_loss_acc"):
-            reward = -0.1*next_stats['loss_test_value'] + next_stats['correct_cnt_test_mem']
-
-        elif(self.params.reward_type == "test_loss_rlt"):
-            reward = prev_stats['loss_test_value']-next_stats['loss_test_value']
-
-        elif(self.params.reward_type == "acc_diff"):
-            reward = - np.abs(next_stats['correct_cnt_mem']-next_stats['correct_cnt_test_mem']) \
-                     - np.abs(next_stats['correct_cnt_mem'] - next_stats['correct_cnt_incoming'])
-
-        elif(self.params.reward_type == "scaled"):
-            #return np.log(correct_cnt_test_mem+1)
-            reward = 100*correct_cnt_test_mem
-        elif(self.params.reward_type == "real_reward"):
-            reward =  100*self.CL_agent.evaluator.evaluate_model(self.model,self.CL_agent.task_seen)
-        elif(self.params.reward_type == "multi-step"):
-            #reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
-            reward = -next_stats['loss_test_value'] #-prev_stats['loss_test_value']
-        elif(self.params.reward_type == "multi-step-0"):
-            if((i+1) %self.params.done_freq==0):
-
-                reward =  100*(correct_cnt_test_mem)
-            else:
-                reward = 0
-        elif(self.params.reward_type == "multi-step-0-rlt"):
-            if((i+1) %self.params.done_freq==0):
-
-                reward =  100*(correct_cnt_test_mem)-self.episode_start_test_acc
-                self.episode_start_test_acc = 100 * correct_cnt_test_mem
-                #print("___________________________________")
-                print("### ",str(i)," episode start", self.episode_start_test_acc)
-            else:
-                reward = 0
-        elif(self.params.reward_type == "multi-step-0-rlt-loss"):
-            if((i+1) %self.params.done_freq==0):
-
-                reward =  100*(next_stats['loss_test_value'])-self.episode_start_test_loss
-
-                self.episode_start_test_loss = 100 * next_stats['loss_test_value']
-                #print("___________________________________")
-                print("### ",str(i)," episode start", self.episode_start_test_loss)
-            else:
-                reward = 0
+        }
+        if(self.params.reward_type in reward_def_dict.keys()):
+            reward = reward_def_dict[self.params.reward_type]
         else:
-            raise NotImplementedError("not implemented reward error")
+            raise NotImplementedError("undefined reward type", self.params.reward_type)
+
+
+
+
+
+
+        # if(self.params.reward_type == "incoming_acc"):
+        #     reward = correct_cnt_incoming#next_state[0,0].numpy()
+        # elif(self.params.reward_type == "mem_acc"):
+        #     reward = correct_cnt_mem#next_state[0, 1].numpy()
+        # elif(self.params.reward_type == "test_acc"):
+        #
+        #     reward = next_stats['correct_cnt_test_mem']-1
+        # elif (self.params.reward_type == "test_loss_old"):
+        #     reward = -next_stats['loss_mem_old']
+        # elif (self.params.reward_type == "test_acc_rlt"):
+        #     reward = (correct_cnt_test_mem - correct_cnt_test_mem_prev)
+        # elif(self.params.reward_type == "test_loss"):
+        #     reward = -next_stats['loss_test_value']
+        # elif(self.params.reward_type == "test_loss_median"):
+        #     reward = -next_stats['loss_median']
+        # elif(self.params.reward_type == "test_loss_acc"):
+        #     reward = -next_stats['loss_test_value']+next_stats['correct_cnt_test_mem']
+        # elif (self.params.reward_type == "test_alpha01_loss_acc"):
+        #     reward = -0.1*next_stats['loss_test_value'] + next_stats['correct_cnt_test_mem']
+        #
+        # elif(self.params.reward_type == "test_loss_rlt"):
+        #     reward = prev_stats['loss_test_value']-next_stats['loss_test_value']
+        #
+        # elif(self.params.reward_type == "acc_diff"):
+        #     reward = - np.abs(next_stats['correct_cnt_mem']-next_stats['correct_cnt_test_mem']) \
+        #              - np.abs(next_stats['correct_cnt_mem'] - next_stats['correct_cnt_incoming'])
+        #
+        # elif(self.params.reward_type == "scaled"):
+        #     #return np.log(correct_cnt_test_mem+1)
+        #     reward = 100*correct_cnt_test_mem
+        # elif(self.params.reward_type == "real_reward"):
+        #     reward =  100*self.CL_agent.evaluator.evaluate_model(self.model,self.CL_agent.task_seen)
+        # elif(self.params.reward_type == "multi-step"):
+        #     #reward =  100*(correct_cnt_test_mem-correct_cnt_test_mem_prev)
+        #     reward = -next_stats['loss_test_value'] #-prev_stats['loss_test_value']
+        # elif(self.params.reward_type == "multi-step-0"):
+        #     if((i+1) %self.params.done_freq==0):
+        #
+        #         reward =  100*(correct_cnt_test_mem)
+        #     else:
+        #         reward = 0
+        # elif(self.params.reward_type == "multi-step-0-rlt"):
+        #     if((i+1) %self.params.done_freq==0):
+        #
+        #         reward =  100*(correct_cnt_test_mem)-self.episode_start_test_acc
+        #         self.episode_start_test_acc = 100 * correct_cnt_test_mem
+        #         #print("___________________________________")
+        #         print("### ",str(i)," episode start", self.episode_start_test_acc)
+        #     else:
+        #         reward = 0
+        # elif(self.params.reward_type == "multi-step-0-rlt-loss"):
+        #     if((i+1) %self.params.done_freq==0):
+        #
+        #         reward =  100*(next_stats['loss_test_value'])-self.episode_start_test_loss
+        #
+        #         self.episode_start_test_loss = 100 * next_stats['loss_test_value']
+        #         #print("___________________________________")
+        #         print("### ",str(i)," episode start", self.episode_start_test_loss)
+        #     else:
+        #         reward = 0
+        # else:
+        #     raise NotImplementedError("not implemented reward error")
 
         if (self.params.reward_test_type == "reverse"):
             reward = -reward

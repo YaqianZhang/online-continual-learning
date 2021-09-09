@@ -10,6 +10,7 @@ class Match_retrieve(object):
     def retrieve(self, buffer, **kwargs):
         if buffer.n_seen_so_far > self.num_retrieve * self.warmup:
             cur_x, cur_y = kwargs['x'], kwargs['y']
+
             return match_retrieve(buffer, cur_y)
         else:
             return torch.tensor([]), torch.tensor([])

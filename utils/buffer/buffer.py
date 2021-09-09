@@ -69,6 +69,36 @@ class Buffer(torch.nn.Module):
     def compute_incoming_influence(self, **kwargs):
         return self.retrieve_method.compute_incoming_influence(buffer=self, **kwargs)
 
+    def retrieve_class_balance_sample(self,num_retrieve):
+        labels = torch.unique(self.buffer_label[:self.current_index])
+        ##### method 1
+        #num_per_class = num_retrieve // len(labels)
+        ##### method 2
+        num_of_labels = []
+        for label in labels:
+            idx = self.buffer_label[:self.current_index] == label
+            num_of_labels.append(torch.sum(idx).item())
+        valid_num = np.min(num_of_labels)
+        num_per_class = valid_num
+        #print("!!!numperclass",valid_num,num_of_labels,labels)
+       # assert False
+        selected_imgs = []
+        selected_labels = []
+        for label in labels:
+            idx = self.buffer_label[:self.current_index] == label
+            valid_img = self.buffer_img[:self.current_index][idx]
+            perm_idx = np.random.permutation(len(valid_img)).tolist()
+            selected_img = valid_img[perm_idx][:num_per_class]
+            selected_imgs.append(selected_img)
+            selected_label = self.buffer_label[:self.current_index][idx][perm_idx][:num_per_class]
+            selected_labels.append(selected_label)
+        selected_imgs = torch.cat(selected_imgs,dim=0)
+        selected_labels = torch.cat(selected_labels,dim=0)
+        return selected_imgs,selected_labels
+
+
+
+
     def random_retrieve(self,**kwargs):
         return self.random_retrieve_method.retrieve(buffer=self, **kwargs)
 

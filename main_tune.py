@@ -53,5 +53,6 @@ if __name__ == "__main__":
     parser.add_argument('--train_val', type=boolean_string, default=False,
                         help='use tha val batches to train')
     parser.add_argument('--trick', type=str, default=None)
+    parser.add_argument('--exp_name',type=str,default="")
     args = parser.parse_args()
     main(args)

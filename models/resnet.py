@@ -4,6 +4,7 @@ Code adapted from https://github.com/facebookresearch/GradientEpisodicMemory
                   https://github.com/kuangliu/pytorch-cifar
 """
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
 from torch.nn.functional import relu, avg_pool2d
 
@@ -104,17 +105,25 @@ class ResNet(nn.Module):
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
+
+
         out = avg_pool2d(out, 4)
+
+
         out = out.view(out.size(0), -1)
+
+
         return out
 
     def logits(self, x):
         '''Apply the last FC linear mapping to get logits'''
         x = self.linear(x)
+
         return x
 
     def forward(self, x):
         out = self.features(x)
+
         logits = self.logits(out)
         return logits
 
@@ -161,3 +170,36 @@ def ResNet101(nclasses, nf=64, bias=True):
 
 def ResNet152(nclasses, nf=64, bias=True):
     return ResNet(Bottleneck, [3, 8, 36, 3], nclasses, nf, bias)
+
+class SupConResNet(nn.Module):
+    """backbone + projection head"""
+    def __init__(self, dim_in=160, head='mlp', feat_dim=128):
+        super(SupConResNet, self).__init__()
+        self.encoder = Reduced_ResNet18(100)
+        if head == 'linear':
+            self.head = nn.Linear(dim_in, feat_dim)
+        elif head == 'mlp':
+            self.head = nn.Sequential(
+                nn.Linear(dim_in, dim_in),
+                nn.ReLU(inplace=True),
+                nn.Linear(dim_in, feat_dim)
+            )
+        elif head == 'None':
+            self.head = None
+        else:
+            raise NotImplementedError(
+                'head not supported: {}'.format(head))
+
+    def forward(self, x,need_feature=False):
+        feat_org = self.encoder.features(x)
+        if self.head:
+            feat = F.normalize(self.head(feat_org), dim=1)
+        else:
+            feat = F.normalize(feat_org, dim=1)
+        if(need_feature):
+            return feat,feat_org
+        else:
+            return feat
+
+    def features(self, x):
+        return self.encoder.features(x)

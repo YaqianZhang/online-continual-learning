@@ -35,6 +35,7 @@ class CIFAR100(DatasetBase):
                                                                                         self.params.ns_type, self.params.ns_factor,
                                                                                         plot=self.params.plot_sample)
         elif self.scenario == 'nc':
+
             if(self.params.dataset_random_type == "task_random"):
 
                 self.task_labels = create_task_composition(class_nums=100, num_tasks=self.task_nums, fixed_order=self.params.fix_order)

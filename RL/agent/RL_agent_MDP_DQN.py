@@ -14,7 +14,7 @@ from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
 class RL_DQN_agent(RL_memIter_agent):
     def __init__(self, params):
         super().__init__(params)
-        self.update_q_target_freq = 1000
+        self.update_q_target_freq = params.update_q_target_freq #1000
         self.epsilon = None
         self.batch_num = None
         self.predicted_q=[]
@@ -50,7 +50,7 @@ class RL_DQN_agent(RL_memIter_agent):
         with torch.no_grad():
             #print("take greedy action",self.RL_agent_update_steps )
             state = maybe_cuda(state)
-            output = self.critic.compute_q(state)
+            output = self.critic.compute_q(state,self.critic.q_function)
             q_values= output[0, :]
             self.predicted_q.append(torch.max(q_values).detach().cpu().numpy())
 
@@ -182,7 +182,7 @@ class RL_DQN_agent(RL_memIter_agent):
         self.mse_training_loss.append(rl_loss.item())
     
 
-        if(self.params.reward_type[:10] == "multi-step" and  self.RL_agent_update_steps  % self.update_q_target_freq == 0):
+        if(self.params.reward_type[:10] == "multi-step" and  (self.RL_agent_update_steps  % self.params.update_q_target_freq == 0)):
             self.critic.update_q_target()
 
 

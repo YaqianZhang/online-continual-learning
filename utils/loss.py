@@ -2,7 +2,7 @@
 Author: Yonglong Tian (yonglong@mit.edu)
 Date: May 07, 2020
 """
-from __future__ import print_function
+#from __future__ import print_function
 
 import torch
 import torch.nn as nn
@@ -16,11 +16,10 @@ class SupConLoss(nn.Module):
         self.temperature = temperature
         self.contrast_mode = contrast_mode
 
-    def forward(self, features, labels=None, mask=None):
+    def forward(self, features, labels=None, mask=None,need_full=False):
         """Compute loss for model. If both `labels` and `mask` are None,
         it degenerates to SimCLR unsupervised loss:
         https://arxiv.org/pdf/2002.05709.pdf
-
         Args:
             features: hidden vector of shape [bsz, n_views, ...].
             labels: ground truth of shape [bsz].
@@ -52,8 +51,13 @@ class SupConLoss(nn.Module):
         else:
             mask = mask.float().to(device)
 
+
+
+
+
         contrast_count = features.shape[1]
         contrast_feature = torch.cat(torch.unbind(features, dim=1), dim=0)
+
         if self.contrast_mode == 'one':
             anchor_feature = features[:, 0]
             anchor_count = 1
@@ -67,12 +71,16 @@ class SupConLoss(nn.Module):
         anchor_dot_contrast = torch.div(
             torch.matmul(anchor_feature, contrast_feature.T),
             self.temperature)
+
+
         # for numerical stability
         logits_max, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
         logits = anchor_dot_contrast - logits_max.detach()
 
+
         # tile mask
         mask = mask.repeat(anchor_count, contrast_count)
+
         # mask-out self-contrast cases
         logits_mask = torch.scatter(
             torch.ones_like(mask),
@@ -80,17 +88,31 @@ class SupConLoss(nn.Module):
             torch.arange(batch_size * anchor_count).view(-1, 1).to(device),
             0
         )
+
         mask = mask * logits_mask
+
+
+
 
         # compute log_prob
         exp_logits = torch.exp(logits) * logits_mask
         log_prob = logits - torch.log(exp_logits.sum(1, keepdim=True))
 
+
         # compute mean of log-likelihood over positive
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
+
+
+        #print(mean_log_prob_pos.shape)
 
         # loss
         loss = -1 * mean_log_prob_pos
         loss = loss.view(anchor_count, batch_size).mean()
+        loss_full = -1 * mean_log_prob_pos
 
-        return loss
+        # if(need_full):
+        #
+        #     return loss,loss_full
+        # else:
+        return loss,loss_full
+

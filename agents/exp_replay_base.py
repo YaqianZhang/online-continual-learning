@@ -5,7 +5,7 @@ from agents.base import ContinualLearner
 
 from utils.utils import maybe_cuda, AverageMeter
 
-from utils.buffer.memory_manager import memory_manager_class
+
 from utils.utils import cutmix_data
 
 
@@ -13,7 +13,6 @@ class ExperienceReplay_base(ContinualLearner):
     def __init__(self, model, opt, params):
         super(ExperienceReplay_base, self).__init__(model, opt, params)
 
-        self.memory_manager = memory_manager_class(model, params)
         self.stats = None
 
         self.episode_start_test_acc = None
@@ -24,21 +23,7 @@ class ExperienceReplay_base(ContinualLearner):
         self.incoming_batch = None
         self.replay_para = None
 
-        ## save train acc
-        self.mem_iter_list =[]
-        self.incoming_ratio_list=[]
-        self.mem_ratio_list=[]
 
-        self.train_acc_incoming = []
-        self.train_acc_mem=[]
-        self.test_acc_mem=[]
-
-        self.train_loss_incoming = []
-        self.train_loss_mem=[]
-        self.test_loss_mem=[]
-        self.test_loss_mem_new=[]
-        self.test_loss_mem_old=[]
-        self.train_loss_old=[]
 
 
 
@@ -78,7 +63,7 @@ class ExperienceReplay_base(ContinualLearner):
         return logits
 
     def compute_logits_loss(self,x,y,ratio=1,need_grad=True,MEM_FLAG=False):
-        do_cutmix = self.params.cut_mix and np.random.rand(1) < 0.5
+        do_cutmix = self.params.do_cutmix and np.random.rand(1) < 0.5
         if do_cutmix :
             #print(x.shape)
             x, labels_a, labels_b, lam = cutmix_data(x=x, y=y, alpha=1.0)
@@ -335,43 +320,7 @@ class ExperienceReplay_base(ContinualLearner):
     #
 
 
-    def save_mem_iters(self,prefix):
-        arr = np.array(self.mem_iter_list)
-        np.save(prefix + "mem_iter_list", arr)
-        arr = np.array(self.incoming_ratio_list)
-        np.save(prefix + "incoming_ratio_list", arr)
-        arr = np.array(self.mem_ratio_list)
-        np.save(prefix + "mem_ratio_list", arr)
 
-    def save_training_acc(self,prefix):
-        arr = np.array(self.train_acc_incoming)
-        np.save(prefix + "train_acc_incoming.npy", arr)
-
-        arr = np.array(self.train_acc_mem)
-        np.save(prefix + "train_acc_mem.npy", arr)
-
-        arr = np.array(self.test_acc_mem)
-        np.save(prefix + "test_acc_mem.npy", arr)
-
-        arr = np.array(self.train_loss_incoming)
-        np.save(prefix + "train_loss_incoming.npy", arr)
-
-        arr = np.array(self.train_loss_mem)
-        np.save(prefix + "train_loss_mem.npy", arr)
-
-        arr = np.array(self.test_loss_mem)
-        np.save(prefix + "test_loss_mem.npy", arr)
-        arr = np.array(self.test_loss_mem_new)
-        np.save(prefix + "test_loss_mem_new.npy", arr)
-        arr = np.array(self.test_loss_mem_old)
-        np.save(prefix + "test_loss_mem_old.npy", arr)
-
-        arr = np.array(self.train_loss_old)
-        np.save(prefix + "train_loss_old.npy", arr)
-        if(self.params.RL_type != "NoRL"):
-
-            arr = np.array(self.RL_trainer.return_list)
-            np.save(prefix + "return_list.npy", arr)
 
 
     def log_stats_list(self,stats):

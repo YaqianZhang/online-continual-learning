@@ -15,6 +15,32 @@ _str_to_activation = {
     'softplus': nn.Softplus(),
     'identity': nn.Identity(),
 }
+class extractlastcell(nn.Module):
+    def forward(self,x):
+        out , _ = x
+        return out[:, -1, :]
+
+
+def build_lstm(
+        input_dim:int,
+        hidden_dim:int,
+        output_size:int,
+        n_layers:int,
+        seq_len:int):
+
+    return nn.Sequential(
+        nn.LSTM(input_dim, hidden_dim, n_layers, batch_first=True),
+        extractlastcell(),
+        nn.Linear(hidden_dim, output_size))
+
+    # lstm_layer = nn.LSTM(input_dim,hidden_dim,n_layers,batch_first = True)
+    # input =torch.randn(batch_size,seq_len,input_dim)
+    # hidden_state = torch.randn(n_layers,batch_size,hidden_dim)
+    # cell_state = torch.randn(n_layers,batch_size,hidden_dim)
+    # hidden = (hidden_state,cell_state)
+    # out,hidden = lstm_layer(input,hidden)
+
+
 
 
 def build_mlp(
@@ -24,6 +50,7 @@ def build_mlp(
         size: int,
         activation: Activation = 'relu',#'tanh',
         output_activation: Activation = 'identity',
+        use_dropout=False,
 ):
     """
         Builds a feedforward neural network
@@ -49,7 +76,10 @@ def build_mlp(
         layers.append(nn.Linear(in_size, size))
         layers.append(activation)
         in_size = size
+        if use_dropout:
+            layers.append(nn.Dropout(p=0.2))
     layers.append(nn.Linear(in_size, output_size))
+
     layers.append(output_activation)
     return nn.Sequential(*layers)
 

@@ -19,11 +19,10 @@ class memory_manager_class(object):
         self.buff_replay_times = 0
 
         ## test buffer
-        if (params.RL_type != "NoRL" ):
+        if (params.RL_type != "NoRL"  or params.use_test_buffer == True):
             self.test_buffer = Test_Buffer(params, )
             self.params.use_test_buffer = True
-        else:
-            self.params.use_test_buffer = False
+
 
         ## tmp buffer
         if(params.use_tmp_buffer):

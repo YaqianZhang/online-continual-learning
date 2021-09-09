@@ -7,6 +7,7 @@ import numpy as np
 from experiment.metrics import compute_performance
 
 
+
 def tune_hyper(tune_data, tune_test_loaders, default_params, tune_params):
     param_grid_list = list(ParameterGrid(tune_params))
     print(len(param_grid_list))
@@ -28,12 +29,13 @@ def tune_hyper(tune_data, tune_test_loaders, default_params, tune_params):
                 print("-----------tune run {} task {}-------------".format(run, i))
                 print('size: {}, {}'.format(x_train.shape, y_train.shape))
                 agent.train_learner(x_train, y_train)
-                acc_array = agent.evaluate(tune_test_loaders)
+                acc_array,loss_array = agent.evaluate(tune_test_loaders)
                 tmp_acc.append(acc_array)
             print(
                 "-----------tune run {}-----------avg_end_acc {}-----------".format(run, np.mean(tmp_acc[-1])))
             accuracy_list.append(np.array(tmp_acc))
         accuracy_list = np.array(accuracy_list)
+
         avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
         tune_accs.append(avg_end_acc[0])
         tune_fgt.append(avg_end_fgt[0])

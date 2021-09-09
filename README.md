@@ -59,6 +59,9 @@ pip install -r requirements.txt
 * GSS: Gradient-Based Sample Selection (**NeurIPS, 2019**) [[Paper]](https://arxiv.org/pdf/1903.08671.pdf)
 * GDumb: Greedy Sampler and Dumb Learner (**ECCV, 2020**) [[Paper]](https://www.robots.ox.ac.uk/~tvg/publications/2020/gdumb.pdf)
 * CN-DPM: Continual Neural Dirichlet Process Mixture (**ICLR, 2020**) [[Paper]](https://openreview.net/forum?id=SJxSOJStPr)
+* SCR: Supervised Contrastive Replay (**CVPR Workshop, 2021**) [[Paper]](https://arxiv.org/abs/2103.13885) 
+
+
 
 ## Tricks
 - Label trick [[Paper]](https://arxiv.org/pdf/1803.10123.pdf)
@@ -102,6 +105,9 @@ python general_main.py --data cifar100 --cl_type nc --agent CNDPM --stm_capacity
 
 #ASER
 python general_main.py --data cifar100 --cl_type nc --agent ER --update ASER --retrieve ASER --mem_size 5000 --aser_type asvm --n_smp_cls 1.5 --k 3 
+
+#SCR
+python general_main.py --data cifar100 --cl_type nc --agent SCR --retrieve random --update random --mem_size 5000 --head mlp --temp 0.07 --eps_mem_batch 100
 ```
 
 ### Sample command to add a trick to memory-based methods
@@ -125,7 +131,8 @@ python main_tune.py --general config/general_1.yml --data config/data/cifar100/c
         ├──gdumb.py                     #File for GDumb
         ├──iCaRL.py                     #File for iCaRL
         ├──lwf.py                       #File for LwF
-
+        ├──scr.py                       #File for SCR
+    
     ├──continuum                    #Files for create the data stream objects
         ├──dataset_scripts              #Files for processing each specific dataset
             ├──dataset_base.py              #Abstract class for dataset
@@ -143,7 +150,7 @@ python main_tune.py --general config/general_1.yml --data config/data/cifar100/c
             ├──...
         ├──pretrained.py                #Files for pre-trained models
         ├──resnet.py                    #Files for ResNet
-
+    
     ├──utils                        #Files for utilities
         ├──buffer                       #Files related to buffer
             ├──aser_retrieve.py             #File for ASER retrieval
@@ -155,23 +162,27 @@ python main_tune.py --general config/general_1.yml --data config/data/cifar100/c
             ├──mir_retrieve.py              #File for MIR retrieval
             ├──random_retrieve.py           #File for random retrieval
             ├──reservoir_update.py          #File for random update
-
+    
         ├──global_vars.py               #Global variables for CN-DPM
         ├──io.py                        #Code related to load and store csv or yarml
         ├──kd_manager.py                #File for knowledge distillation
         ├──name_match.py                #Match name strings to objects 
         ├──setup_elements.py            #Set up and initialize basic elements
         ├──utils.py                     #File for general utilities
-
+    
     ├──config                       #Config files for hyper-parameters tuning
         ├──agent                        #Config files related to agents
         ├──data                         #Config files related to dataset
-
+    
         ├──general_*.yml                #General yml (fixed variables, not tuned)
         ├──global.yml                   #paths to store results 
 
+## Duplicate results
+
+The hyperparameters used in the ASER and SCR papers can be found in the folder `config_CVPR` to duplicate the papers' results. 
 
 ## Citation 
+
 If you use this paper/code in your research, please consider citing us:
 
 **Supervised Contrastive Replay: Revisiting the Nearest Class Mean Classifier in Online Class-Incremental Continual Learning**
@@ -202,11 +213,14 @@ Under review, preprint on arXiv [here](https://arxiv.org/pdf/2101.10423.pdf).
 
 [Accepted at AAAI2021](https://arxiv.org/abs/2009.00093)
 ```
-@article{shim2020online,
+@inproceedings{shim2021online,
   title={Online Class-Incremental Continual Learning with Adversarial Shapley Value},
   author={Shim, Dongsub and Mai, Zheda and Jeong, Jihwan and Sanner, Scott and Kim, Hyunwoo and Jang, Jongseong},
-  journal={arXiv preprint arXiv:2009.00093},
-  year={2020}
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={35},
+  number={11},
+  pages={9630--9638},
+  year={2021}
 }
 ```
 

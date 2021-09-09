@@ -2,6 +2,7 @@ from agents.gdumb import Gdumb
 from continuum.dataset_scripts.cifar100 import CIFAR100
 from continuum.dataset_scripts.cifar10 import CIFAR10
 from continuum.dataset_scripts.core50 import CORE50
+from continuum.dataset_scripts.CLRS import CLRS25
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
 from agents.exp_replay import ExperienceReplay
@@ -21,6 +22,11 @@ from utils.buffer.gss_greedy_update import GSSGreedyUpdate
 from utils.buffer.aser_retrieve import ASER_retrieve
 from utils.buffer.aser_update import ASER_update
 
+from agents.scr import SupContrastReplay
+from agents.scr_meta import SupContrastReplay_meta
+from utils.buffer.sc_retrieve import Match_retrieve
+from utils.buffer.mem_match import MemMatch_retrieve
+
 
 
 data_objects = {
@@ -28,26 +34,31 @@ data_objects = {
     'cifar10': CIFAR10,
     'core50': CORE50,
     'mini_imagenet': Mini_ImageNet,
-    'openloris': OpenLORIS
+    'openloris': OpenLORIS,
+    'clrs25':CLRS25
 }
-
 agents = {
     'ER': ExperienceReplay,
-    'RLER':RL_ExperienceReplay,
-    'LAMAML':LAMAML,
+    'RLER': RL_ExperienceReplay,
+    'LAMAML': LAMAML,
     'EWC': EWC_pp,
     'AGEM': AGEM,
     'CNDPM': Cndpm,
     'LWF': Lwf,
     'ICARL': Icarl,
     'GDUMB': Gdumb,
+    'SCR': SupContrastReplay,
+    'SCR_META':SupContrastReplay_meta,
 }
 
 retrieve_methods = {
     'MIR': MIR_retrieve,
     'random': Random_retrieve,
     'ASER': ASER_retrieve,
-    'RL':RL_retrieve
+    'match': Match_retrieve,
+    'mem_match': MemMatch_retrieve,
+    'RL': RL_retrieve
+
 }
 
 update_methods = {
@@ -58,4 +69,6 @@ update_methods = {
 'rt2':Reservoir_update,
     'timestamp':Reservoir_update,
 }
+
+
 

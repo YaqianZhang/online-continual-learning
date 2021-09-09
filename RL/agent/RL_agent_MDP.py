@@ -168,6 +168,7 @@ class RL_memIter_agent(object):
             "new_old5_overall":5,
             "new_old6_overall_train":6,
             "new_old7_overall_train_income":7,
+            "new_old7_overall_train": 7,
             "new_old5_scale": 5,
             "new_old5_4time":20,
             "new_old5_incoming":6,

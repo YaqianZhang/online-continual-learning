@@ -47,6 +47,28 @@ class Test_Buffer(torch.nn.Module):
             index += self.mem_c[k]
         self.current_index = index
 
+    def retrieve_strict_blc(self):
+
+        min_class = min(self.mem_c.keys(), key=(lambda k: self.mem_c[k]))
+
+        num_per_class = self.mem_c[min_class]
+        mem_x = []
+        mem_y = []
+        for i in self.mem_img.keys():
+            perm_idx = np.array(np.random.permutation(len(self.mem_img[i])))
+            perm_arr = [self.mem_img[i][k] for k in perm_idx]
+            selected_img = perm_arr[:num_per_class]
+
+            mem_x += selected_img
+            mem_y += [i] * num_per_class #self.mem_c[i]
+
+        mem_x = torch.stack(mem_x)
+        mem_y = torch.LongTensor(mem_y)
+        mem_x = maybe_cuda(mem_x)
+        mem_y = maybe_cuda(mem_y)
+        return mem_x,mem_y
+        #
+
 
 
     def retrieve_all(self,):
