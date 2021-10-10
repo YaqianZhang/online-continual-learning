@@ -49,7 +49,9 @@ if __name__ == "__main__":
 
     ########################Agent#########################
     parser.add_argument('--agent', dest='agent', default='ER',
-                        choices=['LAMAML','RLER','ER', 'EWC', 'AGEM', 'CNDPM', 'LWF', 'ICARL', 'GDUMB', 'ASER','SCR','SCR_META'],
+                        choices=['LAMAML','RLER','ER', "ER_RL_ratio","ER_RL_addIter","ER_RL_iter",'EWC', 'AGEM', 'CNDPM', 'LWF', 'ICARL', 'GDUMB',
+                                 'ASER','SCR','SCR_META',
+                                 "SCR_RL_ratio","SCR_RL_iter"],
                         help='Agent selection  (default: %(default)s)')
     parser.add_argument('--update', dest='update', default='random', choices=['random', 'GSS', 'ASER','rt','timestamp','rt2'],
                         help='Update method  (default: %(default)s)')
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--online', dest='online', default=True,
                         type=boolean_string,
                         help='If False, offline training will be performed (default: %(default)s)')
-
+    parser.add_argument('--offline',default = False,type=boolean_string)
     ########################ER#########################
     parser.add_argument('--mem_size', dest='mem_size', default=5000,
                         type=int,
@@ -169,6 +171,9 @@ if __name__ == "__main__":
     parser.add_argument('--mem_iters', dest='mem_iters', default=1, type=int,
                         help='mem_iters')
 
+    parser.add_argument('--start_mem_iters',  default=-1, type=int,
+                        help='mem_iter for the first task')
+
     ####################Early Stopping######################
     parser.add_argument('--min_delta', dest='min_delta', default=0., type=float,
                         help='A minimum increase in the score to qualify as an improvement')
@@ -199,10 +204,11 @@ if __name__ == "__main__":
 
     parser.add_argument('--use_softmaxloss',type=boolean_string,default=False)
     parser.add_argument('--softmax_nlayers',type=int,default=1,help="softmax head for scr")
-    parser.add_argument('--softmax_nsize',type=int,default=32,help="softmax head size for scr")
+    parser.add_argument('--softmax_nsize',type=int,default=1024,help="softmax head size for scr")
     parser.add_argument('--softmax_membatch', type=int, default=100, help="softmax mem batchsize for scr")
     parser.add_argument('--softmax_dropout', type=boolean_string, default=False, help="whether to use dropout in softmax head")
     parser.add_argument('--softmax_type',type=str,default = 'None',choices=['None','seperate','meta'])
+
 ######### meta learn lamaml related
     parser.add_argument('--learn_lr',type=boolean_string,default = False,help="whether to learn softmax head lr")
     parser.add_argument('--second_order',type=boolean_string,default= False)
@@ -225,22 +231,37 @@ if __name__ == "__main__":
     #                     help='initialization for the LRs')
 
     #################### replay dynamics ####################
+    parser.add_argument("--joint_replay_type",default="together",choices=["together","seperate"],
+                        help="implementation type of joint training of incoming batch and memory batch")
     parser.add_argument("--online_hyper_tune", default=False, type=boolean_string)
+    parser.add_argument("--online_hyper_valid_type", default="test_data", type=str, choices=["real_data","test_mem"])
     parser.add_argument("--online_hyper_freq", default=1, type=int)
+    parser.add_argument("--online_hyper_lr_list_type",default="basic",choices=["scr","basic","4lr","5lr"])
+    parser.add_argument("--online_hyper_RL",default=False,type=boolean_string)
+    parser.add_argument("--scr_memIter", default=False, type=boolean_string)
+    parser.add_argument("--scr_memIter_type",default="c_MAB",choices=["c_MAB","MAB"])
+    parser.add_argument("--scr_memIter_state_type", default="4dim", choices=["7dim","6dim","3dim","4dim","train"])
+    parser.add_argument("--scr_memIter_action_type", default="4", choices=["4","8"])
 
     parser.add_argument("--temperature_scaling",default=False,type=boolean_string)
     parser.add_argument("--frozen_old_fc", dest="frozen_old_fc", default=False, type=boolean_string)
     parser.add_argument("--do_cutmix", dest="do_cutmix", default=False, type=boolean_string)
+    parser.add_argument("--cutmix_prob", default=0.5, type=float)
+    parser.add_argument("--cutmix_batch", default=10, type=int)
+    parser.add_argument("--cutmix_type", default="random", choices=["most_confused","train_mem","random","cross_task","mixed"])
+    parser.add_argument("--close_loop_mem_type", default="random",
+                        choices=["low_acc",  "random", ])
+
     parser.add_argument("--only_task_seen",dest="only_task_seen",default=False,type=boolean_string)
     parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","dyna","None"],
                         help='If True, adjust mem iter')
     parser.add_argument("--replay_old_only",dest="replay_old_only",default=False,type=boolean_string,)
 
     parser.add_argument("--split_new_old",dest="split_new_old",default=False,type=boolean_string)
-    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=2, type=int,
+    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=1, type=int,
                         help='')
 
-    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=0, type=int,
+    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
                         help='')
 
     parser.add_argument('--incoming_ratio', dest='incoming_ratio', default=1.0, type=float,
@@ -257,7 +278,7 @@ if __name__ == "__main__":
     parser.add_argument("--rl_exp_type",dest="rl_exp_type",type=str,default="exp",choices=["stb2","l_exp","stb","exp","m_exp3","m_exp","m_exp2"])
 
     ################### RL test buffer #####################
-    parser.add_argument('--test_mem_size', dest='test_mem_size', default=5000,
+    parser.add_argument('--test_mem_size', dest='test_mem_size', default=300,
                         type=int,
                         help='Test Memory buffer size (default: %(default)s)')
     parser.add_argument('--test_mem_batchSize', dest='test_mem_batchSize', default=100,
@@ -274,7 +295,7 @@ if __name__ == "__main__":
                         help="whether computing state stats on a class balanced sample from train memory and test memory")
     parser.add_argument("--test_mem_type", dest='test_mem_type', default="after", type=str, choices=["before", "after"],
                         help='')
-
+    parser.add_argument("--test_mem_recycle",default = False, type=boolean_string)
 
     #################################### RL basics ####################################
     parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_actor","RL_ratio_1para","RL_adpRatio","RL_ratio",
@@ -292,7 +313,7 @@ if __name__ == "__main__":
 
     ## reward
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
-                        choices=["test_alpha01_loss_acc","test_loss_old","test_loss_median","test_loss_acc","acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
+                        choices=["test_loss_v_rlt","test_alpha01_loss_acc","test_loss_old","test_loss_median","test_loss_acc","acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
                                  "multi-step","multi-step-0","multi-step-0-rlt","multi-step-0-rlt-loss"],
                         help='')
     parser.add_argument('--reward_rg',dest='reward_rg',default=0,type=float,help="param to for rward regularization")
@@ -311,19 +332,24 @@ if __name__ == "__main__":
     ## dynamics
     parser.add_argument("--done_freq",dest="done_freq",default=249,type=int)
 
-    parser.add_argument("--dynamics_type",dest='dynamics_type',default="next_batch",type=str,
-                        choices=["same_batch","next_batch","within_batch"],
-                        help='whether the reward and transition dynamics are computed for same incoming batch or not')
+    parser.add_argument("--virtual_update_times",default=0,type=int)
+    parser.add_argument("--use_ref_model",default = False)
 
-    parser.add_argument("--episode_type", dest='episode_type', default="task", type=str, choices=["task", "batch"],
+
+    parser.add_argument("--episode_type", dest='episode_type', default="batch", type=str, choices=["multi-step", "batch"],
                         help='')
+
+    parser.add_argument("--dynamics_type", dest='dynamics_type', default="next_batch", type=str,
+                        choices=["same_batch", "next_batch", "within_batch"],
+                        help='whether the reward and transition dynamics are computed for same incoming batch or not')
 
     parser.add_argument("--RL_start_batchstep", dest="RL_start_batchstep", default=0, type=int)
     parser.add_argument("--RL_agent_update_flag",dest="RL_agent_update_flag",default=True,type=boolean_string)
 
     #################################### critic training####################################
     parser.add_argument('--q_function_type', type=str, default="mlp")
-    parser.add_argument("--update_q_target_freq",default=1000,type=int)
+    parser.add_argument("--update_q_target_freq",default=250,type=int)
+    parser.add_argument('--double_DQN',default = True,type=boolean_string)
 
     parser.add_argument("--critic_type", dest='critic_type', default='critic', type=str,
                         choices=["task_critic","critic"])
@@ -344,7 +370,7 @@ if __name__ == "__main__":
     parser.add_argument('--critic_lr', dest='critic_lr', default=5 * 10 ** (-4),
                         type=float,
                         help="")
-    parser.add_argument("--critic_lr_type",dest="critic_lr_type",default="basic",type=str,choices=["static","basic","large","mid","small"])
+    parser.add_argument("--critic_lr_type",dest="critic_lr_type",default="static",type=str,choices=["static","basic","large","mid","small"])
 
     # parser.add_argument('--critic_wd', dest='critic_wd', default=0,
     #                     type=int,
@@ -360,7 +386,6 @@ if __name__ == "__main__":
                         type=int,
                         help="")
     parser.add_argument('--critic_use_model', dest='critic_use_model', default=False,type=boolean_string,
-
                         help="")
     #################################### multiple buffer idea ####################################
 
@@ -391,6 +416,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--test', dest='test', default=" ", type=str,choices=["not_reset"],
                         help='')
+    parser.add_argument('--debug_mode',default=False, type=boolean_string)
 
     parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
                         type=int,

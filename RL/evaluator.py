@@ -6,8 +6,9 @@ class evaluator(object):
     def __init__(self,test_loaders):
         self.test_loaders=test_loaders
 
-    def evaluate_model(self,model,task_seen):
+    def evaluate_model(self,model,task_seen,return_loss=False):
         acc_list=[]
+        loss_list=[]
         num_batch = 1
         for task, test_loader in enumerate(self.test_loaders):
 
@@ -26,6 +27,9 @@ class evaluator(object):
                 _, pred_label = torch.max(logits, 1)
                 correct_cnt = (pred_label == batch_y).sum().item() / batch_y.size(0)
                 acc_list.append(correct_cnt)
+                ce = torch.nn.CrossEntropyLoss(reduction='mean')
+                loss = ce(logits, batch_y)
+                loss_list.append(loss.item())
 
             # for i, (batch_x, batch_y) in enumerate(test_loader):
             #     if(i>=num_batch): break
@@ -38,7 +42,10 @@ class evaluator(object):
             #         _, pred_label = torch.max(logits, 1)
             #         correct_cnt = (pred_label == batch_y).sum().item()/batch_y.size(0)
             #         acc_list.append(correct_cnt)
-        return np.mean(np.array(acc_list))
+        if(return_loss):
+            return np.mean(np.array(acc_list)),np.mean(np.array(loss_list))
+        else:
+            return np.mean(np.array(acc_list))
 
 
 

@@ -55,18 +55,43 @@ class RL_trainer(object):
 
         state = next_state
 
+        self.RL_env.CL_agent.set_mem_data()
+
+        #### virtual explore
+        for i in range(self.params.virtual_update_times):
+            action = self.RL_agent.take_random_action()  ## dormant RL
+
+            if (action != None):
+                end_stats = self.RL_env.step(action,virtual=True)  ## perform replay
+            else:
+                end_stats = stats_dict
+
+            reward = self.RL_env.get_reward(end_stats, stats_dict, )
+            self.RL_agent.ExperienceReplayObj.store(state, action, reward, state, done)
+
+
+        if(self.params.use_ref_model):
+
+            base_action = self.RL_agent.take_base_action()  ## dormant RL
+
+
+            virtual_end_stats = self.RL_env.step(base_action, virtual=True,use_set_mem=True)  ## perform replay
+        else:
+            virtual_end_stats = stats_dict
+
+        # reward = self.RL_env.get_reward(end_stats, stats_dict, )
+        # self.RL_agent.ExperienceReplayObj.store(state, action, reward, state, done)
+
 
 
         action = self.RL_agent.sample_action(state) ## dormant RL
-
-
         if (action != None ):
-            end_stats = self.RL_env.step(action)  ## perform replay
+            end_stats = self.RL_env.step(action,    use_set_mem=True)## perform replay
         else:
             end_stats = stats_dict
+        reward = self.RL_env.get_reward(end_stats, stats_dict,virtual_end_stats)
 
 
-        reward = self.RL_env.get_reward(end_stats, stats_dict,)
         if(self.RL_agent.greedy == "greedy"):
             self.RL_agent.real_q.append(reward)
             self.RL_agent.greedy_action.append(action)

@@ -27,8 +27,8 @@ class RL_env_MDP(Base_RL_env):
     def initialize(self):
 
         self.RL_mem_iters =0
-        self.RL_incoming_ratio = 0
-        self.RL_mem_ratio = 0
+        self.RL_incoming_ratio = 1
+        self.RL_mem_ratio = 1
 
         # self.state = None
         # self.action = None
@@ -97,10 +97,13 @@ class RL_env_MDP(Base_RL_env):
 
 
 
-    def step(self,action):
+    def step(self,action,virtual=False,use_set_mem=False):
         self.CL_agent.replay_para = self.get_replay_action(action)
         #end_stats = self.CL_agent.replay_and_evaluate(replay_para)
-        end_stats = self.CL_agent.joint_training(self.CL_agent.replay_para, TEST=True)
+        if(virtual):
+            end_stats = self.CL_agent.virtual_joint_training(self.CL_agent.replay_para, TEST=True,use_set_mem=use_set_mem)
+        else:
+            end_stats = self.CL_agent.joint_training(self.CL_agent.replay_para, TEST=True,use_set_mem=use_set_mem)
         return end_stats
 
 

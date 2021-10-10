@@ -1,0 +1,41 @@
+
+GPU_ID=0
+MEM_SIZE=10000
+
+
+
+cd ..
+
+
+
+
+NUM_TASKS=5
+DATASET_NAME="cifar10"
+
+for SEED in 1259051 1259052 1259053 1259054  1259055  1259050
+do
+  for MEM_ITER in  1 #4 8
+  do
+
+    for STATE in  "weighted_new_old8"  #"new_old5_overall"
+    do
+
+
+
+          python general_main.py --data $DATASET_NAME --cl_type nc \
+--agent "ER_RL_ratio" --retrieve random --update random  \
+--mem_size $MEM_SIZE --eps_mem_batch 10 \
+ --dataset_random_type task_random  --seed $SEED --num_tasks $NUM_TASKS \
+ --seed $SEED --GPU_ID $GPU_ID --mem_iters $MEM_ITER \
+  --RL_type "RL_2ratioMemIter"  --action_space_type "ionly_dense" \
+  --state_feature_type  $STATE --reward_type "test_loss_rlt" \
+  --mem_iter_min 1 --mem_iter_max 1 --critic_lr 1e-3 \
+  --task_start_mem_ratio 0.5 --task_start_incoming_ratio 0.1 \
+  --RL_start_batchstep 0     --update_q_target_freq 250  --critic_type "task_critic"
+#--episode_type "multi-step" \
+#--double_DQN True
+done
+
+done
+
+done

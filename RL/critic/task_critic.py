@@ -32,6 +32,10 @@ class task_critic_class(critic_class):
         self.rl_wd = self.params.critic_wd  # 1 * 10 ** (-6)  # -4
         self.build_task_critic(action_num, ob_dim)
 
+        self.rl_opt = torch.optim.Adam(self.get_parameters(),
+                                  lr=self.params.critic_lr,
+                                  )
+
 
 
 
@@ -61,15 +65,15 @@ class task_critic_class(critic_class):
         else:
             self.last_n_layers=0
         self.last_n_size=10
-        self.q_func =build_mlp(
+        self.q_function =build_mlp(
             output_dim,
             action_num,
             n_layers=self.last_n_layers,
             size=self.last_n_size,
         )
-        self.q_func = maybe_cuda(self.q_func, self.params.cuda)
+        self.q_function = maybe_cuda(self.q_function, self.params.cuda)
 
-    def compute_q(self,obs,):
+    def compute_q(self,obs,func=None):
 
         pure_state = obs[:,:-self.params.num_tasks]
         task_vec = obs[:,-self.params.num_tasks:]
@@ -77,12 +81,12 @@ class task_critic_class(critic_class):
         task_logits = self.task_logit_func(task_vec)
         input = shared_logits+task_logits
 
-        q_values = self.q_func(input)
+        q_values = self.q_function(input)
         return q_values
 
     def get_parameters(self):
 
-        return list(self.q_func.parameters())+ \
+        return list(self.q_function.parameters())+ \
                list(self.shared_logit_func.parameters())+ \
                list(self.task_logit_func.parameters())
 

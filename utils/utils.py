@@ -39,6 +39,20 @@ def cutmix_data(x, y, alpha=1.0, cutmix_prob=0.5,index= "None"):
     lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x.size()[-1] * x.size()[-2]))
     return x, y_a, y_b, lam
 
+def cutmix_data_two_data(x_a,y_a,x_b,y_b, alpha=1.0, ):
+    assert alpha > 0
+    # generate mixed sample
+    lam = np.random.beta(alpha, alpha)
+
+    batch_size = x_a.size()[0]
+
+    bbx1, bby1, bbx2, bby2 = rand_bbox(x_a.size(), lam)
+    x_a[:, :, bbx1:bbx2, bby1:bby2] = x_b[:, :, bbx1:bbx2, bby1:bby2]
+
+    # adjust lambda to exactly match pixel ratio
+    lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (x_a.size()[-1] * x_a.size()[-2]))
+    return x_a, y_a, y_b, lam
+
 def maybe_cuda(what, use_cuda=True, **kw):
     """
     Moves `what` to CUDA and returns it, if `use_cuda` and it's available.

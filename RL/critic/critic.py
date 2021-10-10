@@ -117,6 +117,10 @@ class critic_class(object):
     def get_parameters(self):
         return self.q_function.parameters()
     def compute_q(self,obs,func):
+        # obs=obs.float().cuda()
+        # func = func.float()
+        #print(obs.device,func.device)
+        #assert False
         if(self.params.q_function_type  =="lstm"):
             if(self.params.state_feature_type[-5:]=="4time"):
                 seq_obs = torch.reshape(obs, (obs.shape[0], 4, -1))
@@ -153,20 +157,23 @@ class critic_class(object):
 
     def train_batch(self,state_batch,action_batch,reward_batch,next_state_batch,done_batch,training_steps):
 
-        if self.params.reward_type[:10] == "multi-step":
+        if self.params.episode_type == "multi-step":
 
             with torch.no_grad():
                 #q_s = self.q_function_target(next_state_batch)
                 q_s_target = self.compute_q(next_state_batch,self.q_function_target)
                 q_s = self.compute_q(next_state_batch,self.q_function)
 
-                max_a = torch.max(q_s_target,axis=1)[1]
-                #q_max = torch.max(q_s, axis=1)[0]
-                max_a_na=torch.nn.functional.one_hot(max_a,num_classes = q_s.shape[1])
+                if(self.params.double_DQN):
 
-                #td_target = reward_batch + self.gamma * torch.max(q_s, axis=1)[0] * (1 - done_batch)
-                td_target = reward_batch + self.gamma * torch.sum(q_s*max_a_na,axis=1) * (1 - done_batch)
+                    max_a = torch.max(q_s_target,axis=1)[1]
+                    max_a_na=torch.nn.functional.one_hot(max_a,num_classes = q_s.shape[1])
+                    td_target = reward_batch + self.gamma * torch.sum(q_s * max_a_na, axis=1) * (1 - done_batch)
 
+                else:
+
+
+                    td_target = reward_batch + self.gamma * torch.max(q_s, axis=1)[0] * (1 - done_batch)
         else:
             td_target = reward_batch
 
@@ -176,7 +183,10 @@ class critic_class(object):
 
         n = state_batch.shape[0]
         #print(self.RL_agent.ER_batchsize, n)
+
+
         q_values = self.compute_q(state_batch,self.q_function)
+
 
         predict_q = q_values[torch.arange(n), action_batch].float()
 

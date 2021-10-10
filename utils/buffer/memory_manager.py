@@ -99,6 +99,7 @@ class memory_manager_class(object):
         test_size = int(batch_x.shape[0] * 0.1)
         # print("save batch to test buffer and buffer",test_size)
         self.test_buffer.update(batch_x[:test_size], batch_y[:test_size])
+        print("update test memory")
 
         return batch_x[test_size:], batch_y[test_size:]
     def reset_new_old(self):

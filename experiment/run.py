@@ -19,26 +19,46 @@ import torch
 
 
 def get_prefix(params,run):
+
     trick = ""
-    if(params.agent[:3]=="SCR"):
-        trick+= "temp"+str(params.temp)+"_"
+    if(params.joint_replay_type != "together"):
+        trick += "replaySep_"
+
     if(params.only_task_seen):
         trick+="onlySeen_"
+    if(params.frozen_old_fc):
+        trick+="frz_"
+
     if(params.online_hyper_tune):
-        trick += "hp"+str(params.online_hyper_freq)+"_"
+        trick += "hp"+str(params.online_hyper_freq)+params.online_hyper_lr_list_type+"_"
+        if(params.online_hyper_valid_type == "real_data"):
+            trick += "real_"
     else:
         if (params.learning_rate != 0.1):
             trick += "lr" + str(params.learning_rate) + "_"
-    if(params.frozen_old_fc):
-        trick+="frz_"
+    if(params.agent == "SCR" and params.scr_memIter):
+        trick += "memIter_"
+        if(params.scr_memIter_type =="MAB"):
+            trick += "MAB_"
+        trick += params.scr_memIter_state_type +"_"
+        trick += "act"+params.scr_memIter_action_type + "_"
     if(params.lambda_ != 100):
         trick += str(params.lambda_)
-
 
     if (params.nmc_trick):
         trick += "NMC_"
     if (params.use_test_buffer):
         trick += "tbuf_"
+        if(params.test_mem_type == "before"):
+            trick += "bf" +"_"
+        if(params.close_loop_mem_type == "low_acc"):
+            trick+= "memlowacc_"
+    if (params.use_tmp_buffer):
+        trick += "tmpMem_"
+
+    ### scr relateed: temp, softmax ####
+    if(params.agent[:3]=="SCR"):
+        trick+= "temp"+str(params.temp)+"_"
     if (params.softmax_type != 'None'):
         trick += "softmax"+str(params.softmax_nsize) \
     +str(params.softmax_nlayers)
@@ -50,16 +70,22 @@ def get_prefix(params,run):
         if(params.softmaxhead_lr != 0.1):
             trick +="smlr"+str(params.softmaxhead_lr) +"_"
 
+    ### data augumentation ###
     if (params.do_cutmix):
-        trick += "cmix_"
+        trick += "cmix"+str(params.cutmix_prob)+"_"+str(params.cutmix_batch)+"_"
+        if(params.cutmix_type != "random"):
+            trick +=params.cutmix_type +"_"
+
+
     if (params.no_aug):
         trick += "noaug_"
     if(params.aug_type != ""):
         trick += params.aug_type
     if (params.single_aug):
         trick += "saug_"
-    if (params.use_tmp_buffer):
-        trick += "tmpMem_"
+
+
+    ### replay_dynamics
     if(params.dyna_mem_iter != "None"):
         if(params.dyna_mem_iter == "dyna"):
             trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
@@ -67,6 +93,8 @@ def get_prefix(params,run):
             trick += "dMIter_"+params.dyna_mem_iter
     if (params.mem_iters > 1):
         trick += "mIter" + str(params.mem_iters)+"_"
+        if (params.start_mem_iters > -1):
+            trick += "s"+str(params.start_mem_iters)+"_"
     if (params.incoming_ratio != 1):
         trick += "iratio" + str(params.incoming_ratio)+"_"
     if (params.mem_ratio != 1):
@@ -74,6 +102,8 @@ def get_prefix(params,run):
     if(params.dyna_ratio != "None"):
         trick +="dyRatio"+params.dyna_ratio+"_"
 
+
+    ## switch buffer
     if(params.switch_buffer_type != "one_buffer"):
         if(params.switch_buffer_type == "two_buffer"):
             trick += "2Buff"+"_"
@@ -83,26 +113,18 @@ def get_prefix(params,run):
         else:
             raise NotImplementedError("undefined switch buffer")
 
-    if(params.replay_old_only):
-        trick+= "oldonly"+"_"
-    if(params.split_new_old):
-        trick+="splitno"+"_"
+    if (params.test_mem_size != 300):
+        trick += "tmem" + str(params.test_mem_size) + "_"
+    # if (params.test_mem_batchSize > 10):
+    #     trick += "testBch" + str(params.test_mem_batchSize) + "_"
+
+
 
     ### Rl related
-    if (params.RL_type != 'NoRL'):
-        if(params.temperature_scaling):
-            trick  += "TS_"
-        if(params.test_mem_size != 300):
-            trick += "tmem"+str(params.test_mem_size)+"_"
-        if((params.RL_agent_update_flag==False)):
-            trick +="NoT"+"_"
-        if(params.actor_type == "random"):
-            trick += "rndRL_"
-        if(params.q_function_type != "lstm"):
-            trick += "q"+params.q_function_type[:3]+"_"
+    if (params.actor_type == "random"):
+        trick += "rndRL_"
+    if (params.RL_type != 'NoRL' and params.actor_type != "random"):
 
-        if (params.test_mem_batchSize > 10):
-            trick += "testBch" + str(params.test_mem_batchSize)+"_"
         if(params.RL_type == "RL_memIter"):
             trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
         elif(params.RL_type == "RL_2ratioMemIter" ):
@@ -110,45 +132,73 @@ def get_prefix(params,run):
         elif (params.RL_type == "RL_ratio_1para"):
             trick += "RLratio1pr_" + str(params.mem_iter_max) + str(params.mem_iter_min) + "_"
         else:
-        #if(params.retrieve == "RL"):
             trick += params.RL_type + "_"
-        if(params.action_space_type != "sparse"):
-            trick += params.action_space_type+"_"
+
+        if(params.virtual_update_times != 0):
+            trick += "virtual"+str(params.virtual_update_times)+"_"
+        if(params.use_ref_model):
+            trick += "ref_"
+
+
+        #reward
         trick += params.reward_type+"_" ## todo: fix RL_type logic
         trick += str(params.reward_rg)+"_"
+
+        ## action
+        if(params.action_space_type != "sparse"):
+            trick += params.action_space_type+"_"
+
+        ## state
         trick += params.state_feature_type+"_"
-        if(params.critic_training_start != 80):
-            trick += "qstart"+str(params.critic_training_start)+"_"
+
+        ## dynamics
+        if(params.episode_type == "multi-step"):
+            trick += "Done"+str(params.done_freq)+"_"
+            if(params.double_DQN == False):
+                trick += "nodouble_"
+        if(params.dynamics_type == "next_batch"):
+            trick+="nxtBch"+'_'
+        if (params.dynamics_type == "within_batch"):
+            trick += "wthBch" + '_'
+
+
+        ## others
+
+        if (params.replay_old_only):
+            trick += "oldonly" + "_"
+        if (params.split_new_old):
+            trick += "splitno" + "_"
+        if(params.temperature_scaling):
+            trick  += "TS_"
+
+        if((params.RL_agent_update_flag==False)):
+            trick +="NoT"+"_"
+
         if(params.RL_start_batchstep != 0 ):
             trick +="bstart"+str(params.RL_start_batchstep)+"_"
-        if(params.ER_batch_size != 20):
-            trick +="erb"+str(params.ER_batch_size)+"_"
-        if(params.critic_use_model):
-            trick += "Qmodel"+"_"
-        trick += params.rl_exp_type+"_"
-        if(params.dynamics_type == "next_batch"):
-            trick+="nxtBtch"+'_'
-        if(params.update_q_target_freq != 1000):
-            trick+="targetq"+str(params.update_q_target_freq)
-
-        if (params.dynamics_type == "within_batch"):
-            trick += "wthBtch" + '_'
         trick += str(params.task_start_mem_ratio)+str(params.task_start_incoming_ratio)+"_"
-        if(params.critic_type != "critic"):
-            trick +="qtype"+params.critic_type[:2]+"_"
 
-        trick += params.critic_ER_type+"_"
-        if(params.episode_type == "batch"):
-            trick += params.episode_type +"_"
-        if(params.test_mem_type == "before"):
-            trick += "bf" +"_"
+
 
         ##critic_training
-
+        trick += params.rl_exp_type+"_"
         trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
         # trick += "ERbch"+str(params.ER_batch_size)+"_"
-        if(params.reward_type == "multi-step"):
-            trick += "Done"+str(params.done_freq)+"_"
+        if(params.q_function_type != "lstm"):
+            trick += "q"+params.q_function_type[:3]+"_"
+        if(params.critic_type != "critic"):
+            trick +="qtype"+params.critic_type[:2]+"_"
+        if(params.ER_batch_size != 20):
+            trick +="erb"+str(params.ER_batch_size)+"_"
+        if(params.update_q_target_freq != 1000):
+            trick+="targetq"+str(params.update_q_target_freq)
+        if(params.critic_use_model):
+            trick += "Qmodel"+"_"
+
+        trick += params.critic_ER_type+"_"
+        if(params.critic_training_start != 80):
+            trick += "qstart"+str(params.critic_training_start)+"_"
+
         if(params.critic_lr_type != "basic"):
             trick +="rllr"+params.critic_lr_type+"_"
         if(params.critic_wd >0):
@@ -160,7 +210,6 @@ def get_prefix(params,run):
             trick += "crtitr" + str(params.critic_training_iters) + "_"
         if(params.critic_recent_steps != 100):
             trick += "criticRct"+str(params.critic_recent_steps)+"_"
-
         if(params.reward_test_type != "None"):
             trick += params.reward_test_type + "_"
 
@@ -168,14 +217,13 @@ def get_prefix(params,run):
         trick += "no_reset"
 
 
-
-
-
     if (not params.save_prefix == ""):
         trick += params.save_prefix+"_"
     if (not params.save_prefix_tmp == ""):
         trick += params.save_prefix_tmp+"_"
-    trick += params.save_prefix_tmp2 + "_"
+
+    if (not params.save_prefix_tmp2 == ""):
+        trick += params.save_prefix_tmp2+"_"
     if( not params.eps_mem_batch == 10):
         trick += "memBch"+str(params.eps_mem_batch)+"_"
     if(params.num_runs>1):
@@ -186,11 +234,7 @@ def get_prefix(params,run):
         trick += "orderRnd"+"_"
     trick += params.cl_type+"_"
 
-    # if(params.test_retrieval_step != 100):
-    #     trick += "testRetrieve"+str(params.test_retrieval_step)+"_"
 
-    # t = time.localtime()
-    # timestamp = time.strftime('%b-%d-%Y_%H%M', t)
     if(params.new_folder != ""):
         folder_path = "results/" + params.new_folder+"/"+str(params.seed)
         if (not os.path.exists("results/" + params.new_folder)):
@@ -206,9 +250,6 @@ def get_prefix(params,run):
     return prefix
 def save_stats_acc(params,accuracy_list,run=1,loss_list=[]):
     prefix = "results/"+str(params.seed) + "/" +params.exp_name+"_"+params.agent+"_"+params.data+"_"+ "tune"
-
-
-
 
     print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
@@ -226,15 +267,29 @@ def save_stats(params,agent,model,accuracy_list,run=1,loss_list=[]):
     np.save(prefix + "accuracy_list.npy", accuracy_list)
     np.save(prefix + "loss_list.npy", loss_list)
 
-    agent.save_training_acc(prefix) # training_accuracy
+
+
+    if (params.use_test_buffer):
+        if(params.agent == "RLER"):
+            pass
+        else:
+            agent.close_loop_cl.save_task_reward(prefix)
+            print("save task!!!!!!!!!!!!!!")
+    agent.save_training_acc(prefix)  # training_accuracy
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
     if( params.RL_type != "NoRL" ):
         print("save reward in run")
-        agent.RL_agent.save_RL_stats(prefix) # q, reward, action
+        if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
+                                                                             "ER_RL_ratio","ER_RL_iter",
+                                                                             "ER_RL_addIter"]):
+            agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
 
-        agent.RL_env.save_task_reward(prefix)
+        else:
+            agent.RL_agent.save_RL_stats(prefix) # q, reward, action
+
+            #agent.RL_env.save_task_reward(prefix)
 
     agent.save_mem_iters(prefix) ## memiter raio
 
@@ -300,7 +355,7 @@ def multiple_run(params,store=False,save_path=False):
 
         save_task_info(params,data_continuum,run)
 
-        if(params.reward_type == "real_reward"):
+        if(params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
             agent.evaluator = evaluator(test_loaders)
         else:
             agent.evaluator = None
@@ -308,6 +363,8 @@ def multiple_run(params,store=False,save_path=False):
 
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
+            if(params.debug_mode and i>2):
+                break  ## debug
             #
 
             print("-----------run {} training task {}-------------".format(run, i))
@@ -318,8 +375,17 @@ def multiple_run(params,store=False,save_path=False):
            # agent.train_learner(x_train, y_train, labels)
             acc_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
-            if (params.RL_type != "NoRL"):
-                agent.RL_env.update_task_reward()
+
+            # if (params.RL_type != "NoRL"):
+            if (params.use_test_buffer):
+
+                if (params.agent == "RLER"):
+                    pass
+                else:
+                    print("update",agent.close_loop_cl.task_tacc)
+
+                    agent.close_loop_cl.update_task_reward()
+
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
@@ -373,15 +439,15 @@ def multiple_RLtrainig_run(params):
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
         save_task_info(params,data_continuum,0)
 
+        if (params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
 
-
-        if(params.reward_type == "real_reward"):
             agent.evaluator = evaluator(test_loaders)
         else:
             agent.evaluator = None
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            #if(i>2): break  ## debug
+            if(params.debug_mode and i>2):
+                break  ## debug
 
 
             print("-----------run {} training task {}-------------".format(run, i))
@@ -391,8 +457,10 @@ def multiple_RLtrainig_run(params):
             acc_array,loss_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
             tmp_loss.append(loss_array)
-            if (params.RL_type != "NoRL"):
-                agent.RL_env.update_task_reward()
+            # if (params.RL_type != "NoRL"):
+            if(params.use_test_buffer):
+
+                agent.close_loop_cl.update_task_reward()
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),

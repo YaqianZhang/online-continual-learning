@@ -4,6 +4,7 @@ from utils.utils import maybe_cuda
 import torch
 import random
 import numpy as np
+from utils.buffer.recycle import recycle
 
 
 
@@ -35,7 +36,9 @@ class Test_Buffer(torch.nn.Module):
         self.update_method = name_match.update_methods[params.update](params,)
         self.retrieve_method = name_match.retrieve_methods[params.retrieve](params)
 
-    #
+        if (self.params.test_mem_recycle):
+            self.recycler = recycle()
+
     # def update(self, x, y,tmp_buffer=None):
     #     return self.update_method.update(buffer=self, x=x, y=y,tmp_buffer=tmp_buffer)
 
@@ -107,7 +110,9 @@ class Test_Buffer(torch.nn.Module):
             if sum(self.mem_c.values()) >= self.buffer_size:
                 cls_max = max(self.mem_c.items(), key=lambda k:k[1])[0]
                 idx = random.randrange(self.mem_c[cls_max])
-                self.mem_img[cls_max].pop(idx)
+                img = self.mem_img[cls_max].pop(idx)
+                if(self.params.test_mem_recycle):
+                    recycle.store_tmp(img,cls_max)
                 self.mem_c[cls_max] -= 1
             if y not in self.mem_img:
                 self.mem_img[y] = []

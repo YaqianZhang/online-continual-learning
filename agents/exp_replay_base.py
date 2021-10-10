@@ -7,6 +7,10 @@ from utils.utils import maybe_cuda, AverageMeter
 
 
 from utils.utils import cutmix_data
+from utils.buffer.buffer_utils import get_grad_vector
+import copy
+from utils.setup_elements import setup_opt
+
 
 
 class ExperienceReplay_base(ContinualLearner):
@@ -22,6 +26,7 @@ class ExperienceReplay_base(ContinualLearner):
         self.task_seen_so_far = 0
         self.incoming_batch = None
         self.replay_para = None
+        self.replay_feature = None
 
 
 
@@ -167,8 +172,27 @@ class ExperienceReplay_base(ContinualLearner):
 
 
     #### jointrain with one concat
+    def set_mem_data(self):
+        batch_x = self.incoming_batch['batch_x']
+        batch_y = self.incoming_batch['batch_y']
+        self.mem_x, self.mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
 
-    def joint_training(self,replay_para,TEST=False):
+
+    def virtual_joint_training(self,replay_para,TEST=False,use_set_mem=False):
+
+
+        model_temp = copy.deepcopy(self.model)
+        opt_temp = setup_opt(self.params.optimizer, model_temp,
+                        self.params.learning_rate, self.params.weight_decay)
+
+
+        return self.joint_training( replay_para, TEST=TEST, model=model_temp,opt =opt_temp,use_set_mem=use_set_mem )
+
+    def joint_training(self,replay_para,TEST=False,model=None,opt=None,use_set_mem=False):
+        if(model == None):
+            model = self.model
+        if(opt ==  None):
+            opt = self.opt
         iters = replay_para['mem_iter']
         mem_ratio = replay_para['mem_ratio']
         incoming_ratio = replay_para['incoming_ratio']
@@ -183,7 +207,12 @@ class ExperienceReplay_base(ContinualLearner):
         for j in range(iters):
 
             #mem_x, mem_y = self.buffer.retrieve(x=batch_x, y=batch_y)
-            mem_x, mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
+            if(use_set_mem):
+                mem_x = self.mem_x
+                mem_y = self.mem_y
+
+            else:
+                mem_x, mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
 
             if mem_x.size(0) > 0:
                 mem_x = maybe_cuda(mem_x, self.cuda)
@@ -192,7 +221,13 @@ class ExperienceReplay_base(ContinualLearner):
 
                 batch_x = torch.cat([batch_x,mem_x])
                 batch_y = torch.cat([batch_y,mem_y])
-            logits = self.model.forward(batch_x)
+            logits, feature = model.forward(batch_x,feature_flag=True)
+            self.replay_feature  = torch.mean(feature,dim = 0).detach().cpu().numpy()
+            #torch.max(feature,dim = 0)[0]
+            # print(self.replay_feature.shape)
+            # assert False
+
+
             loss = self.criterion(logits, batch_y,reduction_type="none")
 
             if(loss.shape[0] == 20):
@@ -213,9 +248,9 @@ class ExperienceReplay_base(ContinualLearner):
                 loss_incoming = loss.item()
                 acc_mem = None
                 loss_mem = None
-            self.opt.zero_grad()
+            opt.zero_grad()
             loss.backward()
-            self.opt.step()
+            opt.step()
 
             if(loss_mem != None):
 
@@ -231,7 +266,7 @@ class ExperienceReplay_base(ContinualLearner):
                 stats_dict = None
 
         if(TEST):
-            stats_dict = self.compute_test_accuracy(stats_dict)
+            stats_dict = self.compute_test_accuracy(stats_dict,model)
 
 
         return stats_dict

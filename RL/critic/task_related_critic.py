@@ -98,7 +98,7 @@ class critic_class(object):
 
     def train_batch(self,state_batch,action_batch,reward_batch,next_state_batch,done_batch,training_steps):
 
-        if self.params.reward_type[:10] == "multi-step":
+        if self.params.episode_type == "multi-step":
 
             with torch.no_grad():
                 q_s = self.q_function_target(next_state_batch)

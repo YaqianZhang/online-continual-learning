@@ -100,9 +100,13 @@ class RL_ExperienceReplay(object):
         state_batch = np.concatenate(self.state_list)[idx]
         action_batch = np.array(self.action_list)[idx]
         reward_batch = np.array(self.reward_list)[idx]
+        #if(self.params.episode_type == "multi-step"):
         next_state_batch =np.concatenate(self.next_state_list)[idx]
         done_batch = np.array(self.done_list)[idx]
         return state_batch,action_batch,reward_batch,next_state_batch,done_batch
+        # else:
+        #     return state_batch, action_batch, reward_batch, None, None
+
 
 
     def store(self,state,action,reward,next_state,done):

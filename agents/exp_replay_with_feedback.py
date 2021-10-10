@@ -14,20 +14,20 @@ class ExperienceReplay_eval(ExperienceReplay_base):
             self.scaled_model = ModelWithTemperature(model)
 
 
-    def hyperparameter_tune(self):
-        grad_dims = []
-        for param in self.model.parameters():
-            grad_dims.append(param.data.numel())
-        grad_vector = get_grad_vector(self.model.parameters, grad_dims)
-        max_acc = -1
-        for lr in [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1]:
-            model_temp = self.get_future_step_parameters(self.model, grad_vector, grad_dims,lr)
-            test_batch_x, test_batch_y = self.memory_manager.test_buffer.retrieve_all()
-            acc,loss = self.compute_acc_data_model(model_temp,test_batch_x,test_batch_y)
-            if(acc>max_acc):
-                best_para =  lr
-                max_acc = acc
-        self.params.learning_rate = best_para
+    # def hyperparameter_tune(self):
+    #     grad_dims = []
+    #     for param in self.model.parameters():
+    #         grad_dims.append(param.data.numel())
+    #     grad_vector = get_grad_vector(self.model.parameters, grad_dims)
+    #     max_acc = -1
+    #     for lr in [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1]:
+    #         model_temp = self.get_future_step_parameters(self.model, grad_vector, grad_dims,lr)
+    #         test_batch_x, test_batch_y = self.memory_manager.test_buffer.retrieve_all()
+    #         acc,loss = self.compute_acc_data_model(model_temp,test_batch_x,test_batch_y)
+    #         if(acc>max_acc):
+    #             best_para =  lr
+    #             max_acc = acc
+    #     self.params.learning_rate = best_para
 
 
     def compute_acc_data_model(self,model,x,y):
@@ -38,45 +38,14 @@ class ExperienceReplay_eval(ExperienceReplay_base):
         return acc,loss
 
 
-    def get_future_step_parameters(self, model, grad_vector, grad_dims,lr):
-        """
-        computes \theta-\delta\theta
-        :param this_net:
-        :param grad_vector:
-        :return:
-        """
-        new_model = copy.deepcopy(model)
-        self.overwrite_grad(new_model.parameters, grad_vector, grad_dims)
-        with torch.no_grad():
-            for param in new_model.parameters():
-                if param.grad is not None:
-                    param.data = param.data - lr * param.grad.data
-        return new_model
 
-    def overwrite_grad(self, pp, new_grad, grad_dims):
-        """
-            This is used to overwrite the gradients with a new gradient
-            vector, whenever violations occur.
-            pp: parameters
-            newgrad: corrected gradient
-            grad_dims: list storing number of parameters at each layer
-        """
-        cnt = 0
-        for param in pp():
-            param.grad = torch.zeros_like(param.data)
-            beg = 0 if cnt == 0 else sum(grad_dims[:cnt])
-            en = sum(grad_dims[:cnt + 1])
-            this_grad = new_grad[beg: en].contiguous().view(
-                param.data.size())
-            param.grad.data.copy_(this_grad)
-            cnt += 1
     ##### concat implementation
-    def _add_old_new_task_feature_jt(self, batch_x, batch_y, mem_ratio, stats_dict, flag=None):
+    def _add_old_new_task_feature_jt(self,model, batch_x, batch_y, mem_ratio, stats_dict, flag=None):
         if (self.params.temperature_scaling):
 
             logits = self.scaled_model.forward(batch_x)
         else:
-            logits = self.model.forward(batch_x)
+            logits = model.forward(batch_x)
         loss = self.criterion(logits, batch_y, reduction_type="none")
         _, pred_label = torch.max(logits, 1)
         acc_all = pred_label == batch_y
@@ -104,6 +73,7 @@ class ExperienceReplay_eval(ExperienceReplay_base):
                           )
         stats_dict['correct_cnt_test_mem'] = acc_overall/len(acc_all)
         stats_dict['loss_test_value'] = test_loss  ## used for reward
+        stats_dict['acc_test']=acc_overall
         return stats_dict
 
     def _add_old_new_task_feature(self, mem_x, mem_y, mem_ratio, stats_dict,flag=None):
@@ -210,7 +180,7 @@ class ExperienceReplay_eval(ExperienceReplay_base):
 
 
 
-    def compute_test_accuracy(self, stats_dict):
+    def compute_test_accuracy(self, stats_dict,model):
         if(stats_dict == None):
             stats_dict={}
 
@@ -234,18 +204,18 @@ class ExperienceReplay_eval(ExperienceReplay_base):
 
             self.scaled_model.set_temperature(zip(test_batch_x_reshape,test_batch_y_reshape))
 
-        #### add train stats balanced
-        # train_batch_x,train_batch_y = self.memory_manager.buffer.retrieve_class_balance_sample(num_retrieve=100)
-        # train_acc,train_loss,  = self.batch_loss(train_batch_x, train_batch_y, need_grad=False,)
-        # #print(train_acc,train_loss)
-        # stats_dict.update({"train_acc":train_acc,
-        #                    "train_loss":train_loss.item()})
-        # self.train_acc_blc.append(train_acc)
-        # self.train_loss_blc.append(train_loss.item())
-        # stats_dict['correct_cnt_test_mem'] = test_acc
-        # stats_dict['loss_test_value'] = test_loss.detach().cpu()  ## used for reward
-        if self.params.save_prefix  == "joint_training":
-            stats_dict = self._add_old_new_task_feature_jt(test_batch_x, test_batch_y, 1.0, stats_dict) ## used for next state
+        #### add train stats balanced todo: state 7dim train memory
+        if(self.params.state_feature_type == "train_test4"):
+            train_batch_x,train_batch_y = self.memory_manager.buffer.retrieve_class_balance_sample(num_retrieve=100)
+            train_acc,train_loss,  = self.batch_loss(train_batch_x, train_batch_y, need_grad=False,)
+            #print(train_acc,train_loss)
+            stats_dict.update({"train_acc":train_acc,
+                               "train_loss":train_loss.item()})
+            self.train_acc_blc.append(train_acc)
+            self.train_loss_blc.append(train_loss.item())
+
+        if self.params.joint_replay_type  == "together":
+            stats_dict = self._add_old_new_task_feature_jt(model,test_batch_x, test_batch_y, 1.0, stats_dict) ## used for next state
 
         else:
             stats_dict = self._add_old_new_task_feature(test_batch_x, test_batch_y, 1.0,

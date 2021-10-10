@@ -34,7 +34,8 @@ class RL_memIter_agent(object):
         #training
         training_steps_dict = {"cifar100":5000,
                           "core50":10000,
-                          "cifar10":5000}
+                          "cifar10":5000,
+                               "clrs25":1500}
 
 
 
@@ -92,9 +93,11 @@ class RL_memIter_agent(object):
                 elif (params.action_space_type == "ionly"):
                     self.mem_ratio_design_space = [ 1.0, ]
                     self.incoming_ratio_design_space = [0.1, 0.5, 1.0,1.5 ]
+                    self.base_action = 2
                 elif (params.action_space_type == "ionly_dense"):
                     self.mem_ratio_design_space = [ 1.0, ]
                     self.incoming_ratio_design_space = [0.1,0.2,0.3, 0.5,0.75, 1.0,1.2,1.5 ]
+                    self.base_action = 5
                 elif (params.action_space_type == "monly_dense"):
                     self.incoming_ratio_design_space = [ 1.0, ]
                     self.mem_ratio_design_space = [0.1,0.2,0.3, 0.5,0.75, 1.0,1.2,1.5 ]
@@ -148,6 +151,11 @@ class RL_memIter_agent(object):
     def initialize_state(self,state_feature_type):
         ######### state ###############
         ob_dim_dict={
+
+            ### memiter
+            "train_test4": 4,
+
+
             "4_dim":4,
             "4_loss":4,
             "3_dim":3,
@@ -159,12 +167,17 @@ class RL_memIter_agent(object):
             "same_batch":6,
             "sam_batch_7_dim":7,
             "new_old2":2,
+
             "new_old3": 3,
             "new_old4": 4,
             "new_old_old": 3,
             "new_old_old4": 4,
             "new_old_old4_noi": 3,
             "new_old5": 5,
+            "weighted_new_old8": 8,
+            "new_old10":10,
+            "new_old_train7": 7,
+            "input_new_old5":5+160,
             "new_old5_overall":5,
             "new_old6_overall_train":6,
             "new_old7_overall_train_income":7,

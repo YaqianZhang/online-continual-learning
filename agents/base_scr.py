@@ -106,7 +106,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             for i, lbl in enumerate(labels):
                 labels[i] = self.lbl_inv_map[lbl.item()]
             return F.nll_loss(ss, labels)
-        elif self.params.agent in ['SCR','SCR_META', 'SCP']:
+        elif self.params.agent in ['SCR','SCR_META', 'SCP',"SCR_RL_ratio","SCR_RL_iter"]:
             SC = SupConLoss(temperature=self.params.temp)
             return SC(logits, labels)
         else:
@@ -118,7 +118,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
     def evaluate(self, test_loaders):
         self.model.eval()
         acc_array = np.zeros(len(test_loaders))
-        if self.params.trick['nmc_trick'] or self.params.agent in ['ICARL', 'SCR', 'SCP','SCR_META',]:
+        if self.params.trick['nmc_trick'] or self.params.agent in ["SCR_RL_ratio","SCR_RL_iter",'ICARL', 'SCR', 'SCP','SCR_META',]:
             exemplar_means = {}
             cls_exemplar = {cls: [] for cls in self.old_labels}
             buffer_filled = self.buffer.current_index
@@ -157,7 +157,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                 for i, (batch_x, batch_y) in enumerate(test_loader):
                     batch_x = maybe_cuda(batch_x, self.cuda)
                     batch_y = maybe_cuda(batch_y, self.cuda)
-                    if self.params.trick['nmc_trick'] or self.params.agent in ['ICARL', 'SCR', 'SCP','SCR_META',]:
+                    if self.params.trick['nmc_trick'] or self.params.agent in ["SCR_RL_ratio","SCR_RL_iter",'ICARL', 'SCR', 'SCP','SCR_META',]:
                         feature = self.model.features(batch_x)  # (batch_size, feature_size)
                         for j in range(feature.size(0)):  # Normalize
                             feature.data[j] = feature.data[j] / feature.data[j].norm()

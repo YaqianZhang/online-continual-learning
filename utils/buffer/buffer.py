@@ -69,17 +69,38 @@ class Buffer(torch.nn.Module):
     def compute_incoming_influence(self, **kwargs):
         return self.retrieve_method.compute_incoming_influence(buffer=self, **kwargs)
 
+    def retrieve_class_num(self,class_num_list,num_retrieve):
+        valid_each_class = []
+        for c in class_num_list:
+            valid_each_class.append(self.buffer_label[:self.current_index].numpy() == c )
+        valid_each_class = np.array(valid_each_class)
+        boolean_indices =  np.sum(valid_each_class,axis = 0)>=1
+
+        valid_indices = np.arange(self.current_index)[boolean_indices]
+        #assert False
+
+
+        indices = torch.from_numpy(np.random.choice(valid_indices, num_retrieve, )).long()
+
+        x = self.buffer_img[indices]
+
+        y = self.buffer_label[indices]
+
+        x = maybe_cuda(x)
+        y = maybe_cuda(y)
+        return x,y
+
     def retrieve_class_balance_sample(self,num_retrieve):
         labels = torch.unique(self.buffer_label[:self.current_index])
         ##### method 1
-        #num_per_class = num_retrieve // len(labels)
-        ##### method 2
-        num_of_labels = []
-        for label in labels:
-            idx = self.buffer_label[:self.current_index] == label
-            num_of_labels.append(torch.sum(idx).item())
-        valid_num = np.min(num_of_labels)
-        num_per_class = valid_num
+        num_per_class = num_retrieve // len(labels)
+        # ##### method 2
+        # num_of_labels = []
+        # for label in labels:
+        #     idx = self.buffer_label[:self.current_index] == label
+        #     num_of_labels.append(torch.sum(idx).item())
+        # valid_num = np.min(num_of_labels)
+        # num_per_class = valid_num
         #print("!!!numperclass",valid_num,num_of_labels,labels)
        # assert False
         selected_imgs = []

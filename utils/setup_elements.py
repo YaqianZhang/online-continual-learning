@@ -52,7 +52,7 @@ transforms_match = {
 def setup_architecture(params):
     nclass = n_classes[params.data]
 
-    if params.agent in ['SCR','SCR_META', 'SCP']:
+    if params.agent in ['SCR','SCR_META', 'SCP',"SCR_RL_ratio","SCR_RL_iter"]:
         if params.data == 'mini_imagenet':
             return SupConResNet(640, head=params.head)
         if params.data == 'clrs25':

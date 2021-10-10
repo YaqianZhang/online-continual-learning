@@ -122,8 +122,8 @@ class RL_ExperienceReplay(ExperienceReplay_eval):
     def train_learner(self, x_train, y_train,labels=None):
         print("new task!!!!!!!!!!!!!!!")
 
-        if(self.params.episode_type == "batch"):
-            self.RL_agent.initialize_q()
+        # if(self.params.episode_type == "batch"):
+        #     self.RL_agent.initialize_q()
         ## reset q function
         self.memory_manager.reset_new_old()
         if(self.params.critic_ER_type == "recent3" or self.params.critic_ER_type == "recent4"):

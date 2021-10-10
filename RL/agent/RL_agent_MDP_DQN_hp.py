@@ -11,8 +11,8 @@ from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
 
 
 
-class RL_DQN_agent(RL_memIter_agent):
-    def __init__(self, params):
+class RL_DQN_agent_hp(RL_memIter_agent):
+    def __init__(self, params,action_num,state_dim):
         super().__init__(params)
         self.update_q_target_freq = params.update_q_target_freq #1000
         self.epsilon = None
@@ -21,6 +21,8 @@ class RL_DQN_agent(RL_memIter_agent):
         self.real_q=[]
         self.greedy_action=[]
         self.select_batch_num=[]
+        self.action_num=action_num
+        self.ob_dim=state_dim
 
 
 
@@ -129,11 +131,6 @@ class RL_DQN_agent(RL_memIter_agent):
 
         self.real_action_list.append(action)
         return  action
-    def take_random_action(self):
-        return np.random.randint(0,self.action_num)
-
-    def take_base_action(self):
-        return self.base_action
 
 
 

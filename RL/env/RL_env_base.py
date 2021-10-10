@@ -70,6 +70,12 @@ class Base_RL_env(object):
             #               "loss_mem_new": loss_mem_new,
             #                    "old_task_num":len(y_old),
             #                    "new_task_num":len(y_new)})
+        elif(state_feature_type == "input_new_old5"):
+            list_data = [stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
+                         stats_dict["loss_mem_old"], stats_dict["loss_mem_new"], stats_dict['loss_test_value']
+                         ]
+
+            list_data +=  list(self.CL_agent.replay_feature)
         elif(state_feature_type == "new_old3"):
             list_data = [i,
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"]]
@@ -85,6 +91,13 @@ class Base_RL_env(object):
             list_data = [stats_dict["correct_cnt_mem_old"],stats_dict["correct_cnt_mem_new"],
                          stats_dict["loss_mem_old"],stats_dict["loss_mem_new"],
                          stats_dict['loss_test_value'],stats_dict['loss_mem_value'],
+                         ]
+
+        elif(state_feature_type == "train_test4"):
+            list_data = [
+                         stats_dict['loss_test_value'],  stats_dict['acc_test'],
+                stats_dict['train_acc'],
+                         stats_dict['train_loss'],
                          ]
         elif (state_feature_type == "new_old7_overall_train"):
             list_data = [stats_dict["correct_cnt_mem_old"], stats_dict["correct_cnt_mem_new"],
@@ -204,18 +217,22 @@ class Base_RL_env(object):
             raise NotImplementedError("undefined state type",state_feature_type)
         if(self.params.dynamics_type == "within_batch"):
             list_data.append(stats_dict['mini_iter'])
+        #if(state_feature_type != "input_new_old5"):
         state = np.array(list_data, dtype=np.float32).reshape([1, -1])
         state = torch.from_numpy(state)
         return state
 
 
 
-    def get_reward(self,next_stats,prev_stats,):
+    def get_reward(self,next_stats,prev_stats,virtual_stats=None):
+        if(virtual_stats == None):
+            virtual_stats = next_stats
         reward_def_dict={
             "test_acc":next_stats['correct_cnt_test_mem']-1,
             "test_loss":-next_stats['loss_test_value'],
             "test_acc_rlt":next_stats['correct_cnt_test_mem']-prev_stats["correct_cnt_test_mem"],
-            "test_loss_rlt":prev_stats['loss_test_value']-next_stats['loss_test_value']
+            "test_loss_rlt":prev_stats['loss_test_value']-next_stats['loss_test_value'],
+            "test_loss_v_rlt":virtual_stats['loss_test_value']-next_stats['loss_test_value'],
 
         }
         if(self.params.reward_type in reward_def_dict.keys()):
@@ -302,16 +319,7 @@ class Base_RL_env(object):
         #reward = reward - self.params.reward_rg * np.abs(next_stats['loss_mem_value']-next_stats['loss_test_value'])#action_mem_iter
         return reward
 
-    def update_task_reward(self):
-        if(len(self.reward_list) == 0): return
-        self.task_reward_list.append(self.reward_list[-1])
-    def save_task_reward(self,prefix):
 
-        arr = np.array(self.task_reward_list)
-        np.save(prefix + "task_reward_list.npy", arr)
-
-        arr = np.array(self.influence_score_list)
-        np.save(prefix + "influence_score_list).npy", arr)
 
 
 

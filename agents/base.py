@@ -157,7 +157,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             for i, lbl in enumerate(labels):
                 labels[i] = self.lbl_inv_map[lbl.item()]
             return F.nll_loss(ss, labels)
-        elif self.params.agent in ['SCR','SCR_META', 'SCP']:
+        elif self.params.agent in ['SCR','SCR_META', 'SCP',"SCR_RL_ratio","SCR_RL_iter"]:
             SC = SupConLoss(temperature=self.params.temp)
             return SC(logits, labels)
         else:
@@ -188,6 +188,35 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                 logits, labels_b
             )
         return softmax_loss
+
+    def set_memIter(self):
+
+        if self.task_seen == 0 and self.params.start_mem_iters>-1:
+            self.mem_iters = self.params.start_mem_iters
+        else:
+            self.mem_iters = self.params.mem_iters
+    def concat_memory_batch(self, batch_x,batch_y):
+        mem_x, mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
+        if (self.params.close_loop_mem_type == "low_acc" and self.low_acc_classes != None):
+            add_mem_x, add_mem_y = self.memory_manager.buffer.retrieve_class_num(self.low_acc_classes, self.eps_mem_batch)
+            mem_x = torch.cat([mem_x, add_mem_x, ])
+            mem_y = torch.cat([mem_y, add_mem_y, ])
+
+
+
+        if mem_x.size(0) > 0:
+            mem_x = maybe_cuda(mem_x, self.cuda)
+            mem_y = maybe_cuda(mem_y, self.cuda)
+
+            batch_x = torch.cat([mem_x,batch_x,])
+            batch_y = torch.cat([mem_y,batch_y,])
+
+
+        return batch_x,batch_y,mem_x.size(0)
+    def _compute_softmax_logits(self,x,need_grad = True):
+
+        logits = self.model.forward(x)
+        return logits
 
     def compute_acc(self,logits,batch_y):
         if (self.params.only_task_seen):
@@ -300,6 +329,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                     batch_x = maybe_cuda(batch_x, self.cuda)
                     batch_y = maybe_cuda(batch_y, self.cuda)
                     if self.params.use_softmaxloss== False and (self.params.trick['nmc_trick'] or self.params.agent in ['ICARL', 'SCR', 'SCP']):
+
                         correct_cnt,pred_label,loss_batch = self.nmc_predict(batch_x,batch_y,exemplar_means)
 
                         # feature = self.model.features(batch_x)  # (batch_size, feature_size)
@@ -325,6 +355,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                         # loss_batch = 0
 
                     else:
+
                         if(task>=self.task_seen):
                             break
                         if(self.params.agent[:3] == "SCR" and self.params.use_softmaxloss):
@@ -445,10 +476,10 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
 
         arr = np.array(self.train_loss_old)
         np.save(prefix + "train_loss_old.npy", arr)
-        if(self.params.RL_type != "NoRL"):
-
-            arr = np.array(self.RL_trainer.return_list)
-            np.save(prefix + "return_list.npy", arr)
+        # if(self.params.RL_type != "NoRL"):
+        #
+        #     arr = np.array(self.RL_trainer.return_list)
+        #     np.save(prefix + "return_list.npy", arr)
         if(self.params.temperature_scaling):
             arr = np.array(self.scaled_model.pre_logits_list)
             np.save(prefix + "pre_celoss.npy",arr)
@@ -457,95 +488,5 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             arr = np.array(self.scaled_model.opt_temp_list)
             np.save(prefix + "opt_temp.npy",arr)
 
-    def hyperparameter_tune(self):
-        lr_list = [0.001,0.01, 0.1, 0.2]
-        if (self.params.save_prefix_tmp == "debug"):
-            return 0.01
-        if (self.params.save_prefix_tmp == "rnd"):
-            # acc_list=[1,1,1]
-            # prob = np.exp(acc_list) / sum(np.exp(acc_list))
 
-            id = np.random.choice(len(lr_list), 1, )[0]
-            selected_para = lr_list[id]
-        else:
 
-            grad_dims = []
-            for param in self.model.parameters():
-                grad_dims.append(param.data.numel())
-            grad_vector = get_grad_vector(self.model.parameters, grad_dims)
-            max_acc = -1
-            acc_list = []
-            loss_list = []
-            test_batch_x, test_batch_y = self.memory_manager.test_buffer.retrieve_all()  # retrieve_all()
-
-            for lr in lr_list:  # [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1]:
-                model_temp = self.get_future_step_parameters(self.model, grad_vector, grad_dims, lr)
-                acc, loss = self.compute_acc_data_model(model_temp, test_batch_x, test_batch_y)
-                if (acc > max_acc):
-                    best_para = lr
-                    max_acc = acc
-                if (self.params.save_prefix_tmp == "reverse"):
-                    acc_list.append(-acc.item())
-                else:
-                    acc_list.append(acc.item())
-
-                loss_list.append(loss.item())
-
-            # prob = np.exp(acc_list) / sum(np.exp(acc_list))
-            #
-            # id= np.random.choice(3, 1,p=prob)[0]
-            # selected_para = lr_list[id]
-            selected_para = best_para
-
-        self.params.learning_rate = selected_para
-        # print("!! best lr",best_para,"selected_lr",selected_para,)#acc_list,)
-        final_lr = selected_para
-        self.adaptive_learning_rate.append(final_lr)
-
-        return final_lr
-
-        # self.opt = torch.optim.SGD(self.model.parameters(),
-        #                         lr=best_para,
-        #                         weight_decay=self.params.weight_decay)
-        #     #setup_opt(self.params.optimizer, model, params.learning_rate, params.weight_decay)
-
-    def compute_acc_data_model(self, model, x, y):
-        with torch.no_grad():
-            logits = model.forward(x)
-            loss = self.criterion(logits, y, reduction_type="mean")
-            _, pred_label = torch.max(logits, 1)
-            acc = (pred_label == y).sum() / len(y)
-        return acc, loss
-
-    def get_future_step_parameters(self, model, grad_vector, grad_dims, lr):
-        """
-        computes \theta-\delta\theta
-        :param this_net:
-        :param grad_vector:
-        :return:
-        """
-        new_model = copy.deepcopy(model)
-        self.overwrite_grad(new_model.parameters, grad_vector, grad_dims)
-        with torch.no_grad():
-            for param in new_model.parameters():
-                if param.grad is not None:
-                    param.data = param.data - lr * param.grad.data
-        return new_model
-
-    def overwrite_grad(self, pp, new_grad, grad_dims):
-        """
-            This is used to overwrite the gradients with a new gradient
-            vector, whenever violations occur.
-            pp: parameters
-            newgrad: corrected gradient
-            grad_dims: list storing number of parameters at each layer
-        """
-        cnt = 0
-        for param in pp():
-            param.grad = torch.zeros_like(param.data)
-            beg = 0 if cnt == 0 else sum(grad_dims[:cnt])
-            en = sum(grad_dims[:cnt + 1])
-            this_grad = new_grad[beg: en].contiguous().view(
-                param.data.size())
-            param.grad.data.copy_(this_grad)
-            cnt += 1

@@ -121,11 +121,14 @@ class ResNet(nn.Module):
 
         return x
 
-    def forward(self, x):
+    def forward(self, x,feature_flag=False):
         out = self.features(x)
 
         logits = self.logits(out)
-        return logits
+        if(feature_flag):
+            return logits, out
+        else:
+            return logits
 
     def forward_with_weights(self, x, weights):
         i=0

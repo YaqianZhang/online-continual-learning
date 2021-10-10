@@ -8,6 +8,7 @@ from PIL import Image
 from continuum.data_utils import shuffle_data, load_task_with_labels
 import time
 import pandas as pd
+import random
 
 
 CLRS25_ntask = {
@@ -24,6 +25,8 @@ class CLRS25(DatasetBase):
             raise Exception('the max number of runs for CLRS25 is 4')
         dataset = 'clrs25'
         task_nums = CLRS25_ntask[scenario]
+        if(params.offline):
+            task_nums = 1
         self.scenario =scenario
 
         super(CLRS25, self).__init__(dataset, scenario, task_nums, params.num_runs, params)
@@ -32,29 +35,6 @@ class CLRS25(DatasetBase):
     def download_load(self):
 
         self.root_folder = self.root
-
-
-
-        # print("Loading paths...")
-        # with open(os.path.join(self.root, 'paths.pkl'), 'rb') as f:
-        #     self.paths = pkl.load(f)
-        #
-        # print("Loading LUP...")
-        # if(self.scenario == "nc" or self.scenario == "ni"):
-        #     lup_file_name = 'LUP.pkl'
-        #     label_file_name = 'labels.pkl'
-        # elif(self.scenario=="nc_balance"):
-        #     lup_file_name = 'LUP_new.pkl'
-        #     label_file_name = 'labels_new.pkl'
-        # else:
-        #     print("undefined mode nc, nc_balance, ni")
-        #     assert False
-        # with open(os.path.join(self.root, lup_file_name), 'rb') as f:
-        #     self.LUP = pkl.load(f)
-        #
-        # print("Loading labels...")
-        # with open(os.path.join(self.root, label_file_name), 'rb') as f:
-        #     self.labels = pkl.load(f)
 
 
 
@@ -69,6 +49,13 @@ class CLRS25(DatasetBase):
 
             train_label = list(train_data.values[:, 1])
             self.task_labels.append(set(train_label))
+
+
+
+        if(self.params.offline):
+            labels = np.arange(25)
+            self.task_labels = [set(labels)]
+
 
 
 
@@ -90,6 +77,8 @@ class CLRS25(DatasetBase):
 
         self.test_label = np.asarray(test_label)
 
+
+
         # for i,l in enumerate(test_label):
         #     x_test = self.test_data[i]
         #     y_test = self.test_label[i]
@@ -108,6 +97,18 @@ class CLRS25(DatasetBase):
         # elif self.scenario == 'ni':
         #     self.test_set = [(self.test_data, self.test_label)]
 
+        if (self.params.offline):
+            self.train_id_all = []
+            self.train_label_all =[]
+            for task_id in range(5):
+                train_path_file = self.root + "/label/NC/run" + str(cur_run) + "/train_task" + str(
+                    task_id + 1) + ".txt"
+                train_data = pd.read_csv(train_path_file, delimiter="\t")
+                train_idx_list = list(train_data.values[:, 0])
+                train_label = list(train_data.values[:, 1])
+                self.train_id_all += train_idx_list
+                self.train_label_all += train_label
+
     def new_task(self, cur_task, **kwargs):
         cur_run = kwargs['cur_run']
         s = time.time()
@@ -116,7 +117,28 @@ class CLRS25(DatasetBase):
         train_idx_list = list(train_data.values[:, 0])
         train_label = list(train_data.values[:, 1])
 
-        #train_idx_list = self.LUP[self.scenario][cur_run][cur_task]
+
+
+
+
+        if (self.params.offline):
+            # train_len = len(train_idx_list)
+            # total_len = len(self.train_id_all)
+            #
+            # idx = np.random.randint(0,total_len,train_len)
+            # train_idx_list = [self.train_id_all[i] for i in idx]
+            # train_label = [self.train_label_all[i] for i in idx]
+            random.shuffle(self.train_id_all)
+            train_idx_list = self.train_id_all
+            random.shuffle(self.train_label_all)
+            train_label = self.train_label_all
+
+
+
+
+
+
+            #train_idx_list = self.LUP[self.scenario][cur_run][cur_task]
         print("Loading data...")
         # Getting the actual paths
         train_paths = []
