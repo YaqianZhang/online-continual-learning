@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser('Continual Learning')
     parser.add_argument('--general', dest='general', default='config/general_1.yml')
     parser.add_argument('--data', dest='data', default='config/data/cifar100/cifar100_nc.yml')
-    parser.add_argument('--default', dest='default', default='config/agent/er/er_1k.yml')
+    parser.add_argument('--default', dest='default', default='config/agent/er/er_10k.yml')
     parser.add_argument('--tune', dest='tune', default='config/agent/er/er_tune.yml')
     parser.add_argument('--save-path', dest='save_path', default=None)
     parser.add_argument('--verbose', type=boolean_string, default=False,
@@ -54,5 +54,9 @@ if __name__ == "__main__":
                         help='use tha val batches to train')
     parser.add_argument('--trick', type=str, default=None)
     parser.add_argument('--exp_name',type=str,default="")
+    parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
+                        type=int,
+                        help="")
     args = parser.parse_args()
+    torch.cuda.set_device(args.GPU_ID)  # args.GPU_ID
     main(args)

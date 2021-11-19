@@ -5,12 +5,22 @@ from utils.utils import maybe_cuda
 from utils.name_match import agents
 import numpy as np
 from experiment.metrics import compute_performance
+from experiment.save_prefix import get_prefix_time
+
 
 
 
 def tune_hyper(tune_data, tune_test_loaders, default_params, tune_params):
+    prefix = get_prefix_time(default_params)
     param_grid_list = list(ParameterGrid(tune_params))
     print(len(param_grid_list))
+    para_name = list(tune_params.keys())
+    para_str = ""
+    for para in para_name:
+        para_str += para
+    print(para_str)
+
+
     tune_accs = []
     tune_fgt = []
     for param_set in param_grid_list:
@@ -40,4 +50,9 @@ def tune_hyper(tune_data, tune_test_loaders, default_params, tune_params):
         tune_accs.append(avg_end_acc[0])
         tune_fgt.append(avg_end_fgt[0])
     best_tune = param_grid_list[tune_accs.index(max(tune_accs))]
+
+    print("save tune acc!!!!")
+
+    np.save(prefix +para_str+"_tune_acc.npy",np.array(tune_accs))
+    np.save(prefix +para_str+"_tune_para.npy", np.array(param_grid_list))
     return best_tune

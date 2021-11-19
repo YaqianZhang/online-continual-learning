@@ -6,6 +6,7 @@ from RL.agent.RL_agent_MDP import RL_memIter_agent
 from utils.utils import maybe_cuda
 from RL.critic.critic import critic_class
 from RL.critic.task_critic import task_critic_class
+from RL.critic.actor_critic import actor_critic_class
 from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
 
 
@@ -23,6 +24,7 @@ class RL_DQN_agent_hp(RL_memIter_agent):
         self.select_batch_num=[]
         self.action_num=action_num
         self.ob_dim=state_dim
+        self.out_range = False
 
 
 
@@ -34,6 +36,11 @@ class RL_DQN_agent_hp(RL_memIter_agent):
         elif(params.critic_type == "critic"):
 
             self.critic = critic_class(params, self.action_num, self.ob_dim,self.total_training_steps,RL_agent=self)
+        elif (params.critic_type == "actor_critic"):
+
+            self.critic = actor_critic_class(params, self.action_num, self.ob_dim, self.total_training_steps,
+                                             RL_agent=self)
+
         else:
             raise NotImplementedError("not defined critic type",params.critic_type)
 
@@ -42,8 +49,82 @@ class RL_DQN_agent_hp(RL_memIter_agent):
         # else:
        #self.critic_training_start = params.ER_batch_size * 4
         self.critic_training_start = params.critic_training_start
+    def clip_action(self,value,max_value,min_value):
+        if(value>max_value):
+            return max_value, True
+        if(value<min_value):
+            return min_value, True
+        return value, False
+
+    def sample_continuous_action(self,state):
+        state = maybe_cuda(state)
+        mu = self.critic.actor(state).detach().cpu().numpy()
+        if (self.params.RL_type == "RL_2ratioMemIter"):
+            if (self.params.mem_iter_max != self.params.mem_iter_min):
+                ratio = mu[0,0]*1.4+0.1
+                iter = mu[0,1]*self.params.mem_iter_max + self.params.mem_iter_min
+
+                mu = [ratio, iter]
+                sigma = [[0.01, 0], [0, 0.2]]
+
+                ratio, iter = np.random.multivariate_normal(mu, sigma)
+
+
+                ratio, ratio_out_range = self.clip_action(ratio, 1.5, 0.1,)
+                iter, iter_out_range = self.clip_action(iter, self.params.mem_iter_max, self.params.mem_iter_min)
+
+                if ratio_out_range or iter_out_range:
+                    self.out_range = True
+                else:
+                    self.out_range = False
+
+                iter = int(iter)
+
+
+                return [ratio,iter]
+            else:
+                ratio = mu[0] * 1.4 + 0.1
+
+                sigma = self.params.ratio_sigma
+
+                ratio = np.random.normal(ratio, sigma)[0]
+
+
+                ratio, ratio_out_range = self.clip_action(ratio, 1.5, 0.1, )
+
+                if ratio_out_range:
+                    self.out_range = True
+                else:
+                    self.out_range = False
+
+
+
+                return [ratio]
+
+        elif(self.params.RL_type == "RL_memIter"):
+
+            iter = mu[0] * self.params.mem_iter_max + self.params.mem_iter_min
+
+            mu = [ iter]
+            sigma =  0.5
+
+            iter = np.random.normal(iter, sigma)
+
+
+            iter, iter_out_range = self.clip_action(iter, self.params.mem_iter_max, self.params.mem_iter_min)
+
+            if iter_out_range:
+                self.out_range = True
+            else:
+                self.out_range = False
+
+            iter = int(iter)
+
+            return [ iter]
 
     def take_greedy_action(self,state):
+        if(self.params.critic_type == "actor_critic"):
+            return self.sample_continuous_action(state)
         if(self.params.state_feature_type == "new_old5_4time"):
             state = self.ExperienceReplayObj.append_state(state)
 
@@ -92,6 +173,24 @@ class RL_DQN_agent_hp(RL_memIter_agent):
     def from_action_to_replay_para(self,action):
         return self.action_design_space[action]
 
+    def take_random_action(self):
+        if(self.params.critic_type == "actor_critic"):
+            if (self.params.RL_type == "RL_2ratioMemIter"):
+                if (self.params.mem_iter_max != self.params.mem_iter_min):
+                    ratio  = np.random.rand()*1.4+0.1
+                    iter = np.random.randint(self.params.mem_iter_min,self.params.mem_iter_max +1 )
+                    return [ratio,iter]
+                else:
+                    ratio  = np.random.rand()*1.4+0.1
+                    return [ratio]
+
+            else:
+                iter = np.random.randint(self.params.mem_iter_min,self.params.mem_iter_max +1 )
+                return [iter]
+        else:
+
+            return np.random.randint(0, self.action_num)
+
 
     def sample_action(self, state):
         if(self.params.RL_type == "DormantRL" or self.params.RL_type == "NoRL"):
@@ -113,7 +212,7 @@ class RL_DQN_agent_hp(RL_memIter_agent):
         if(self.params.critic_use_model):
             if (rnd < self.epsilon ):  ## take random action
 
-                action = np.random.randint(0, self.action_num)  # torch.zeros(1).long().random_(0, self.action_num)
+                action = self.take_random_action()  # torch.zeros(1).long().random_(0, self.action_num)
                 self.greedy = "random"
             else:  ## take greedy action
 
@@ -122,7 +221,7 @@ class RL_DQN_agent_hp(RL_memIter_agent):
         else:
             if(rnd<self.epsilon or self.RL_agent_update_steps<30):# (self.RL_running_steps < self.critic_training_start)): ## take random action
                 #action =torch.randint(0,high=121,size=1)## unrepetitive
-                action = np.random.randint(0,self.action_num)#torch.zeros(1).long().random_(0, self.action_num)
+                action = self.take_random_action()#torch.zeros(1).long().random_(0, self.action_num)
                 self.greedy="random"
             else: ## take greedy action
                 #q_values

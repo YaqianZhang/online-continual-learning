@@ -73,14 +73,8 @@ class ER_RL_addIter(ExperienceReplay):
                     concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
                     if (self.params.randaug):
                         # print(concat_batch_x[0])
-                        if(replay_para['randaug_M'] == 0):
-                            N = 0
-                            #print("No aug")
-                        else:
-                            N = self.params.randaug_N
 
-
-                        self.set_aug_para(N, replay_para['randaug_M'])
+                        self.set_aug_para(self.params.randaug_N, replay_para['randaug_M'])
                         concat_batch_x = self.aug_data(concat_batch_x)
 
                     self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i,replay_para,mem_num=mem_num)

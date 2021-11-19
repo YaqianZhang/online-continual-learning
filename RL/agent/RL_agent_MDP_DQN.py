@@ -6,6 +6,7 @@ from RL.agent.RL_agent_MDP import RL_memIter_agent
 from utils.utils import maybe_cuda
 from RL.critic.critic import critic_class
 from RL.critic.task_critic import task_critic_class
+from RL.critic.actor_critic import actor_critic_class
 from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
 
 
@@ -21,6 +22,7 @@ class RL_DQN_agent(RL_memIter_agent):
         self.real_q=[]
         self.greedy_action=[]
         self.select_batch_num=[]
+        self.out_range = False
 
 
 
@@ -32,6 +34,10 @@ class RL_DQN_agent(RL_memIter_agent):
         elif(params.critic_type == "critic"):
 
             self.critic = critic_class(params, self.action_num, self.ob_dim,self.total_training_steps,RL_agent=self)
+        elif (params.critic_type == "actor_critic"):
+
+            self.critic = actor_critic_class(params, self.action_num, self.ob_dim, self.total_training_steps, RL_agent=self)
+
         else:
             raise NotImplementedError("not defined critic type",params.critic_type)
 
@@ -89,6 +95,37 @@ class RL_DQN_agent(RL_memIter_agent):
 
     def from_action_to_replay_para(self,action):
         return self.action_design_space[action]
+
+
+    def clip_action(self,value,max_value,min_value):
+        if(value>max_value):
+            return max_value, True
+        if(value<min_value):
+            return min_value, True
+        return value, False
+
+    def sample_continuous_action(self,state):
+        state = maybe_cuda(state)
+        mu = self.critic.actor(state)
+        sigma = [0.01,0.5]
+        ratio,iter = np.random.normal(mu, sigma, 1)
+        print(sigma,ratio,iter)
+
+
+
+        assert False
+        ratio, ratio_out_range = self.clip_action(ratio, 0.1,1.5)
+        ratio,iter_out_range = self.clip_action(iter,0,5)
+
+        if ratio_out_range or iter_out_range:
+            self.out_range = True
+        else:
+            self.out_range = False
+
+        return ratio,iter
+
+
+
 
 
     def sample_action(self, state):

@@ -10,6 +10,8 @@ import torch.nn as nn
 from RL.pytorch_util import  build_mlp
 import numpy as np
 from utils.utils import cutmix_data
+from torchvision.transforms import transforms
+from utils.augmentations import RandAugment
 
 
 class SupContrastReplay(ContinualLearner):
@@ -50,11 +52,50 @@ class SupContrastReplay(ContinualLearner):
 
 
 
-        self.replay_para={"mem_ratio":self.params.mem_ratio,
-                          "incoming_ratio":self.params.incoming_ratio,
-                          "mem_iter":self.params.mem_iters}
+        # self.replay_para={"mem_ratio":self.params.mem_ratio,
+        #                   "incoming_ratio":self.params.incoming_ratio,
+        #                   "mem_iter":self.params.mem_iters}
 
+        self.replay_para = {"mem_ratio": self.params.mem_ratio,
+                            "incoming_ratio": self.params.incoming_ratio,
+                            "mem_iter": self.params.mem_iters,
+                            "randaug_M": self.params.randaug_M}
+        _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
+        self.transform_train = transforms.Compose([
+            # transforms.RandomCrop(32, padding=4),
+            # transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            # transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        ])
+        # transform_test = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        # ])
+
+        self.transform_train.transforms.insert(0, RandAugment(self.params.randaug_N, self.params.randaug_M))
+    def aug_data(self,concat_batch_x):
+        n, c, w, h = concat_batch_x.shape
+
+        images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
+
+        concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
+
+        concat_batch_x = maybe_cuda(torch.cat(concat_batch_x, dim=0))
+        return concat_batch_x
+    def set_aug_para(self, N, M):
+        self.transform_train = transforms.Compose([
+            # transforms.RandomCrop(32, padding=4),
+            # transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            # transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        ])
+        # transform_test = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        # ])
+
+        self.transform_train.transforms.insert(0, RandAugment(N, M))
 
     def init_seperate_softmax(self,softmax_inputdim):
         self.softmax_head = maybe_cuda(build_mlp(input_size=softmax_inputdim,

@@ -47,24 +47,24 @@ class task_critic_class(critic_class):
             n_layers=self.n_layers,
             size=self.size,
         ))
-        if (self.params.save_prefix == "tcrt12"):
-            self.task_n_layers = 1
-        else:
-            self.task_n_layers = 0
+        # if (self.params.save_prefix == "tcrt12"):
+        #     self.task_n_layers = 1
+        # else:
+        self.task_n_layers = self.params.critic_task_layer
 
 
-        self.task_n_size=10
+        self.task_n_size=self.params.critic_task_size
         self.task_logit_func = maybe_cuda(build_mlp(
             task_num,
             output_dim,
             n_layers=self.task_n_layers,
             size=self.task_n_size,
         ))
-        if(self.params.save_prefix == "tcrt12"):
-            self.last_n_layers = 2
-        else:
-            self.last_n_layers=0
-        self.last_n_size=10
+        # if(self.params.save_prefix == "tcrt12"):
+        #     self.last_n_layers = 2
+        # else:
+        self.last_n_layers=self.params.critic_last_layer
+        self.last_n_size=self.params.critic_last_size
         self.q_function =build_mlp(
             output_dim,
             action_num,

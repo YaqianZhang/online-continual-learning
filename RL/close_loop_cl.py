@@ -9,7 +9,9 @@ class close_loop_cl(object):
         self.memory_manager = memory_manager
         self.test_mem_loss_list= []
         self.test_mem_acc_list = []
+
         self.task_tloss=[]
+        self.task_tloss_train = []
         self.task_tacc=[]
         self.class_acc_stats = None
         self.class_loss_stats = None
@@ -19,6 +21,7 @@ class close_loop_cl(object):
     def update_task_reward(self):
         if (len(self.test_mem_loss_list) == 0): return
         self.task_tloss.append(self.test_mem_loss_list[-1])
+        #self.task_tloss_train.append(self.last_train_loss)
         if (len(self.test_mem_acc_list) == 0): return
         self.task_tacc.append(self.test_mem_acc_list[-1])
         print("tacc update",self.task_tacc)
@@ -31,6 +34,9 @@ class close_loop_cl(object):
 
         arr = np.array(self.task_tloss)
         np.save(prefix + "tloss_list.npy", arr)
+
+        arr = np.array(self.task_tloss_train)
+        np.save(prefix + "tloss_list_train.npy", arr)
 
         # arr = np.array(self.influence_score_list)
         # np.save(prefix + "influence_score_list).npy", arr)
@@ -136,6 +142,7 @@ class close_loop_cl(object):
                             "loss_mem": mem_loss,
                             "batch_num": i,
                             }
+
 
     def set_train_stats_scr(self, loss_mem, i, softmax_loss=None, acc_incoming=None, incoming_loss=None):
         self.train_stats = {
@@ -287,6 +294,7 @@ class close_loop_cl(object):
 
         self.test_mem_loss_list.append(loss)
         self.test_mem_acc_list.append(acc)
+
 
         self.test_stats = {'test_acc': acc,
                            'test_loss': loss,

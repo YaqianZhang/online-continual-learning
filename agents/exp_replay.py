@@ -11,6 +11,16 @@ from RL.RL_replay_base import RL_replay
 from RL.env.RL_env_MDP import RL_env_MDP
 from RL.agent.RL_agent_MDP_DQN import RL_DQN_agent
 from RL.close_loop_cl import close_loop_cl
+from torchvision.transforms import transforms
+from utils.augmentations import RandAugment
+
+import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
+import numpy as np
+import torch
+from PIL import Image
+from kornia.augmentation import RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomGrayscale
+import torch.nn as nn
+from utils.setup_elements import transforms_match, input_size_match
 
 
 
@@ -28,23 +38,57 @@ class ExperienceReplay(ContinualLearner):
         self.softmax_opt =  torch.optim.SGD(self.model.linear.parameters(),
                                 lr=0.1,
                                 )
-        if(self.params.online_hyper_RL):
-            # self.RL_agent = RL_DQN_agent(params)  # RL_memIter_agent(params)
-            # self.RL_env = RL_env_MDP(params, model, self.RL_agent, self)
+        #if(self.params.online_hyper_RL):
 
-            self.RL_replay = RL_replay(params,)
+
+
         if(self.params.use_test_buffer):
             self.close_loop_cl = close_loop_cl(self,model,self.memory_manager)
             self.mix_label_pair = None
             self.low_acc_classes = None
             self.col=None
             self.row=None
+            self.RL_replay = RL_replay(params, self.close_loop_cl)
         self.replay_para={"mem_ratio":self.params.mem_ratio,
                           "incoming_ratio":self.params.incoming_ratio,
-                          "mem_iter":self.params.mem_iters}
+                          "mem_iter":self.params.mem_iters,
+                          "randaug_M":self.params.randaug_M}
+        _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
+        self.transform_train = transforms.Compose([
+            # transforms.RandomCrop(32, padding=4),
+            # transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            #transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        ])
+        # transform_test = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        # ])
 
+        self.transform_train.transforms.insert(0, RandAugment(self.params.randaug_N, self.params.randaug_M))
 
+        self.scr_transform = nn.Sequential(
+            RandomResizedCrop(size=(input_size_match[self.params.data][1], input_size_match[self.params.data][2]),
+                              scale=(0.2, 1.)),
+            RandomHorizontalFlip(),
+            ColorJitter(0.4, 0.4, 0.4, 0.1, p=0.8),
+            RandomGrayscale(p=0.2)
+
+        )
+    def set_aug_para(self,N,M):
+        self.transform_train = transforms.Compose([
+            # transforms.RandomCrop(32, padding=4),
+            # transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            # transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        ])
+        # transform_test = transforms.Compose([
+        #     transforms.ToTensor(),
+        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
+        # ])
+
+        self.transform_train.transforms.insert(0, RandAugment(N,M))
 
     def _batch_update(self,batch_x,batch_y,losses_batch,acc_batch,i,replay_para=None,mem_num=0):
 
@@ -55,6 +99,8 @@ class ExperienceReplay(ContinualLearner):
 
         # if(self.params.test_mem_recycle):
         #     recycle_test_x = recycle.store_tmp(img,cls_max)
+
+
 
 
 
@@ -85,6 +131,7 @@ class ExperienceReplay(ContinualLearner):
             mem_loss = torch.mean(softmax_loss_full[:mem_num])
             self.train_acc_mem.append(acc_mem)
             self.train_loss_mem.append(mem_loss.item())
+            #self.close_loop_cl.last_train_loss = mem_loss.item()
 
 
             loss = replay_para['mem_ratio'] * mem_loss+ \
@@ -101,8 +148,28 @@ class ExperienceReplay(ContinualLearner):
         self.opt.step()
         self.loss_batch.append(loss.item())
 
+
         return  acc_incoming, incoming_loss.item()
 
+    # def tensor_to_image(self,tensor):
+    #     tensor = tensor * 255
+    #     tensor = np.array(tensor, dtype=np.uint8)
+    #     if np.ndim(tensor) > 3:
+    #         assert tensor.shape[0] == 1
+    #         tensor = tensor[0]
+    #     return PIL.Image.fromarray(tensor)
+
+    def aug_data(self,concat_batch_x):
+        n, c, w, h = concat_batch_x.shape
+
+        images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
+
+        concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
+
+        concat_batch_x = maybe_cuda(torch.cat(concat_batch_x, dim=0))
+        return concat_batch_x
+    def scr_aug_data(self,combined_batch):
+        return self.scr_transform(combined_batch)
 
 
     def train_learner(self, x_train, y_train):
@@ -135,6 +202,13 @@ class ExperienceReplay(ContinualLearner):
                 for j in range(self.mem_iters):
 
                     concat_batch_x,concat_batch_y,mem_num = self.concat_memory_batch(batch_x,batch_y)
+                    if(self.params.randaug):
+                        #print(concat_batch_x[0])
+                        concat_batch_x = self.aug_data(concat_batch_x)
+                    if(self.params.scraug):
+                        concat_batch_x = self.scr_aug_data(concat_batch_x)
+
+
 
                     self._batch_update(concat_batch_x,concat_batch_y, losses_batch, acc_batch, i,mem_num=mem_num)
 

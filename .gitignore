@@ -4,5 +4,6 @@
 *__pycache__*
 figures/
 results/
+result/
 datasets/
 *ipynb_checkpoints*

@@ -264,6 +264,13 @@ if __name__ == "__main__":
     parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
                         help='')
 
+
+    parser.add_argument('--mem_ratio_max', default=1.5,
+                        help='')
+
+    parser.add_argument('--mem_ratio_min', default=0.1,
+                        help='')
+
     parser.add_argument('--incoming_ratio', dest='incoming_ratio', default=1.0, type=float,
                         help='incoming  gradient update ratio')
     parser.add_argument('--mem_ratio', dest='mem_ratio', default=1.0, type=float,
@@ -309,7 +316,7 @@ if __name__ == "__main__":
                         help='Action size (default: %(default)s)')
     parser.add_argument('--actor_type', dest='actor_type', default="greedy",
                         type=str,)
-    parser.add_argument("--action_space_type",dest="action_space_type",default="sparse",type=str,choices=["monly_dense","ionly_dense","ionly","upper","posneu","sparse","medium","dense"])
+    parser.add_argument("--action_space_type",dest="action_space_type",default="sparse",type=str,choices=["cont","monly_dense","ionly_dense","ionly","upper","posneu","sparse","medium","dense"])
 
     ## reward
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
@@ -318,6 +325,7 @@ if __name__ == "__main__":
                         help='')
     parser.add_argument('--reward_rg',dest='reward_rg',default=0,type=float,help="param to for rward regularization")
 
+    parser.add_argument('--reward_within_batch',default=False,type=boolean_string)
 
 
     parser.add_argument("--reward_test_type", dest='reward_test_type', default="None", type=str,
@@ -325,7 +333,7 @@ if __name__ == "__main__":
                         help='')
 
     ## state
-    parser.add_argument("--state_feature_type", dest='state_feature_type', default="new_old6mn_org", type=str,
+    parser.add_argument("--state_feature_type", dest='state_feature_type', default="train_test4", type=str,
                         # choices=["new_old6_overall_train","new_old5_overall","new_old5_scale","new_old_old4","new_old_old4_noi","new_old_old","new_old5_4time","new_old5_task","new_old5_incoming","new_old6mn_org","new_old6mn_incoming","new_old3","new_old6mnt","new_old7","new_old6mn","new_old6m","new_old6","new_old11","new_old9","new_old5","new_old5t","new_old4","new_old2","3_dim", "4_dim", "3_loss", "4_loss", "6_dim",
                         #          "7_dim","task_dim","8_dim"],
                         help='state feature ')
@@ -345,14 +353,19 @@ if __name__ == "__main__":
 
     parser.add_argument("--RL_start_batchstep", dest="RL_start_batchstep", default=0, type=int)
     parser.add_argument("--RL_agent_update_flag",dest="RL_agent_update_flag",default=True,type=boolean_string)
-
+    parser.add_argument("--start_task",default=0)
+    parser.add_argument("--ratio_sigma",default=0.01)
     #################################### critic training####################################
     parser.add_argument('--q_function_type', type=str, default="mlp")
     parser.add_argument("--update_q_target_freq",default=250,type=int)
     parser.add_argument('--double_DQN',default = True,type=boolean_string)
 
     parser.add_argument("--critic_type", dest='critic_type', default='critic', type=str,
-                        choices=["task_critic","critic"])
+                        choices=["task_critic","critic","actor_critic",])
+    parser.add_argument("--critic_task_layer",default=0,type=int)
+    parser.add_argument("--critic_last_layer", default=0, type=int)
+    parser.add_argument("--critic_task_size",default=10,type=int)
+    parser.add_argument("--critic_last_size", default=10, type=int)
 
     parser.add_argument("--critic_ER_type",dest='critic_ER_type',default='recent2',type=str,choices=["recent4","random","recent","recent2","recent3"])
 
@@ -405,6 +418,11 @@ if __name__ == "__main__":
                         type=int,
                         help="")
 
+
+    parser.add_argument("--randaug",default=False)
+    parser.add_argument("--scraug",default=False)
+    parser.add_argument("--randaug_N", default=0,type=int)
+    parser.add_argument("--randaug_M", default=1,type=int)
     #################################################
 
     parser.add_argument('--save_prefix', dest='save_prefix', default="",  help='')

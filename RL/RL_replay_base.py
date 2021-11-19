@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 from RL.agent.RL_agent_MDP_DQN_hp import RL_DQN_agent_hp
+from utils.utils import maybe_cuda
 class RL_replay(object):
 
     def __init__(self,params,close_loop):
@@ -182,7 +183,7 @@ class RL_replay(object):
 
 
 
-        elif (params.RL_type == "DormantRL"):
+        elif (params.RL_type == "DormantRL" or params.RL_type == "NoRL"):
             self.action_design_space = []
 
         else:
@@ -206,8 +207,12 @@ class RL_replay(object):
         else:
             return stats['test_acc']
 
-    def set_reward(self):
+    def set_reward(self,mem_iter = 0):
         self.reward = self._get_reward(self.close_loop_CL.test_stats,self.close_loop_CL.test_stats_prev)
+
+        if(mem_iter != None and self.reward != None):
+
+            self.reward -= self.params.reward_rg*mem_iter
         self.close_loop_CL.test_stats_prev = self.close_loop_CL.test_stats
         if(self.RL_agent.greedy == "greedy"):
             self.RL_agent.real_q.append(self.reward)
@@ -219,6 +224,41 @@ class RL_replay(object):
     def from_action_to_replay_para(self,action):
         return self.action_design_space[action]
     def get_replay_para(self, action):
+        self.raugM = 1
+        if (self.params.critic_type == "actor_critic"):
+            if (self.params.RL_type == "RL_2ratioMemIter"):
+                if (self.params.mem_iter_max != self.params.mem_iter_min):
+                    if(self.params.randaug):
+
+                        if(self.params.save_prefix == "r30test"):
+                            aug = (action[0]-0.1)/1.4*30
+                        else:
+                            aug = int((action[0]-0.1)/1.4*30)
+                        replay_para = {'mem_iter': action[1],
+                                       'mem_ratio': self.RL_mem_ratio,
+                                       'incoming_ratio': self.RL_mem_ratio,
+                                       'randaug_M':aug}
+                    else:
+
+                        replay_para = {'mem_iter': action[1],
+                                       'mem_ratio': self.RL_mem_ratio,
+                                       'incoming_ratio': action[0], }
+                    return replay_para
+                else:
+                    replay_para = {'mem_iter': self.RL_mem_iters,
+                                   'mem_ratio': self.RL_mem_ratio,
+                                   'incoming_ratio': action[0], }
+
+
+
+                    return replay_para
+            else:
+                replay_para = {'mem_iter': action[0],
+                               'mem_ratio': self.RL_mem_ratio,
+                               'incoming_ratio': self.RL_incoming_ratio }
+                return replay_para
+
+
 
         if (self.params.RL_type == "RL_memIter"):
             self.RL_mem_iters = self.RL_agent.from_action_to_replay_para(action)
@@ -231,8 +271,18 @@ class RL_replay(object):
             self.RL_mem_ratio = 1
             self.RL_mem_iters = 1
         elif (self.params.RL_type == "RL_2ratioMemIter" or self.params.RL_type == "RL_ratio_1para"):
-            self.RL_mem_iters, self.RL_incoming_ratio, self.RL_mem_ratio = self.RL_agent.from_action_to_replay_para(
-                action)
+
+
+            if (self.params.randaug):
+                self.RL_mem_iters, act, self.RL_mem_ratio = self.RL_agent.from_action_to_replay_para(
+                    action)
+                self.raugM = int((act - 0.1) / 1.4 * 30)
+                self.RL_incoming_ratio=1
+
+            else:
+                self.RL_mem_iters, self.RL_incoming_ratio, self.RL_mem_ratio = self.RL_agent.from_action_to_replay_para(
+                    action)
+
 
 
         elif (self.params.RL_type == "DormantRL"):
@@ -242,21 +292,26 @@ class RL_replay(object):
 
         replay_para = {'mem_iter': self.RL_mem_iters,
                        'mem_ratio': self.RL_mem_ratio,
-                       'incoming_ratio': self.RL_incoming_ratio, }
+                       'incoming_ratio': self.RL_incoming_ratio,
+                       'randaug_M':self.raugM}
 
         return replay_para
 
 
 
 
-
+    def sample_action(self,state):
+        # if(self.params.critic_type == "actor_critic"):
+        #     return self.RL_agent.sample_continuous_action(state)
+        # else:
+        return self.RL_agent.sample_action(state)
 
 
 
 
 
     def make_replay_decision(self,i): ## action
-        if(self.close_loop_CL.CL_agent.task_seen == 0):
+        if(self.close_loop_CL.CL_agent.task_seen == self.params.start_task):
             return None
 
 
@@ -264,8 +319,10 @@ class RL_replay(object):
             # if(self.task_seen ==0):
             replay_para = {'mem_iter': self.params.mem_iters,
                            'mem_ratio': self.params.task_start_mem_ratio,
+                           "randaug_M":self.params.randaug_M,
                            'incoming_ratio': self.params.task_start_incoming_ratio, }
 
+            print("###",replay_para)
             return replay_para
         if(self.close_loop_CL.test_stats == None):
             return None
@@ -281,7 +338,7 @@ class RL_replay(object):
         self.state = self.next_state
 
 
-        self.action = self.RL_agent.sample_action(self.state) ## dormant RL
+        self.action = self.sample_action(self.state) ## dormant RL
         selected_action= self.get_replay_para(self.action)
         return selected_action
 
@@ -410,6 +467,9 @@ class RL_replay(object):
             done = 1
         else:
             done = 0
+
+        if(self.RL_agent.out_range == True):
+            self.reward = -1
 
 
         self.RL_agent.real_reward_list.append(self.reward)

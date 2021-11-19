@@ -45,6 +45,7 @@ class SCR_RL_iter(SupContrastReplay):
         losses_mem = AverageMeter()
         acc_batch = AverageMeter()
         acc_mem = AverageMeter()
+        replay_para = None
 
         for ep in range(self.epoch):
             for i, batch_data in enumerate(train_loader):
@@ -56,6 +57,7 @@ class SCR_RL_iter(SupContrastReplay):
                 self.set_memIter()
 
                 concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
+
                 acc_incoming, incoming_loss = self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i,
                                                                  self.replay_para,
                                                                  mem_num=mem_num)
@@ -64,20 +66,30 @@ class SCR_RL_iter(SupContrastReplay):
 
                 self.close_loop_cl.set_weighted_test_stats(concat_batch_y, mem_num, )
 
+                if(self.params.reward_within_batch == True):
+                    self.close_loop_cl.compute_testmem_loss()
+                    self.close_loop_CL.test_stats_prev = self.close_loop_CL.test_stats
+                    print(self.close_loop_cl.test_stats_prev)
                 replay_para = self.RL_replay.make_replay_decision(i)  # and update RL
+
                 if (replay_para == None):
                     replay_para = self.replay_para
 
                 for j in range(replay_para['mem_iter']):
                     concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
+                    if (self.params.randaug):
+                        # print(concat_batch_x[0])
 
+                        self.set_aug_para(self.params.randaug_N, replay_para['randaug_M'])
+                        concat_batch_x = self.aug_data(concat_batch_x)
                     self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i, replay_para,
                                        mem_num=mem_num)
 
                 ## compute reward
                 self.close_loop_cl.compute_testmem_loss()
 
-                self.RL_replay.set_reward()
+
+                self.RL_replay.set_reward(replay_para['mem_iter'])
 
                 # self.close_loop_cl.set_train_stats( i, acc_incoming=acc_incoming, incoming_loss=incoming_loss)
 
