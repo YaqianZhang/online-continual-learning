@@ -1,9 +1,9 @@
-from RL.pytorch_util import  build_mlp,build_lstm
+from RL.pytorch_util import  build_mlp
 
-from RL.dqn_utils import cl_exploration_schedule,critic_lr_schedule
+from RL.dqn_utils import critic_lr_schedule
 import torch
 from utils.utils import maybe_cuda
-from RL.lstm import LSTM_critic
+from unused.lstm import LSTM_critic
 
 class critic_class(object):
     def __init__(self,params,action_num,ob_dim,training_steps,RL_agent):

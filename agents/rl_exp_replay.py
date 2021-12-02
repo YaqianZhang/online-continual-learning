@@ -7,10 +7,10 @@ from continuum.data_utils import dataset_transform
 from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
 
-from RL.RL_trainer import RL_trainer
-from RL.env.RL_env_MDP import RL_env_MDP
-from RL.agent.RL_agent_MDP_DQN import RL_DQN_agent
-from RL.agent.RL_pg_agent import RL_pg_agent
+from unused.RL_trainer import RL_trainer
+from unused.env import RL_env_MDP
+from unused.RL_agent_MDP_DQN import RL_DQN_agent
+from unused.RL_pg_agent import RL_pg_agent
 
 
 

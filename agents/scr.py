@@ -19,6 +19,7 @@ class SupContrastReplay(ContinualLearner):
         super(SupContrastReplay, self).__init__(model, opt, params)
         #self.buffer = Buffer(model, params)
         self.buffer = self.memory_manager.buffer
+        self.close_loop_cl = None
         self.mem_size = params.mem_size
         self.eps_mem_batch = params.eps_mem_batch
         self.mem_iters = params.mem_iters
@@ -39,8 +40,11 @@ class SupContrastReplay(ContinualLearner):
             )
         if(params.data in [ 'clrs25', 'core50']):
             softmax_inputdim = 2560
-        elif(params.data in ['cifar100','cifar10']):
+        elif(params.data in ['cifar100','cifar10',]):
             softmax_inputdim = 160
+
+        elif (params.data in [ "mini_imagenet"]):
+            softmax_inputdim = 640
         else:
             raise NotImplementedError("undefined dataset",params.data)
         print(softmax_inputdim)
@@ -60,42 +64,7 @@ class SupContrastReplay(ContinualLearner):
                             "incoming_ratio": self.params.incoming_ratio,
                             "mem_iter": self.params.mem_iters,
                             "randaug_M": self.params.randaug_M}
-        _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
-        self.transform_train = transforms.Compose([
-            # transforms.RandomCrop(32, padding=4),
-            # transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            # transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
-        ])
-        # transform_test = transforms.Compose([
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
-        # ])
-
-        self.transform_train.transforms.insert(0, RandAugment(self.params.randaug_N, self.params.randaug_M))
-    def aug_data(self,concat_batch_x):
-        n, c, w, h = concat_batch_x.shape
-
-        images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
-
-        concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
-
-        concat_batch_x = maybe_cuda(torch.cat(concat_batch_x, dim=0))
-        return concat_batch_x
-    def set_aug_para(self, N, M):
-        self.transform_train = transforms.Compose([
-            # transforms.RandomCrop(32, padding=4),
-            # transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            # transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
-        ])
-        # transform_test = transforms.Compose([
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
-        # ])
-
-        self.transform_train.transforms.insert(0, RandAugment(N, M))
 
     def init_seperate_softmax(self,softmax_inputdim):
         self.softmax_head = maybe_cuda(build_mlp(input_size=softmax_inputdim,
@@ -218,6 +187,9 @@ class SupContrastReplay(ContinualLearner):
         self.train_loss_incoming.append(incoming_loss.item())
         self.train_acc_mem.append(acc_mem)
         self.train_acc_incoming.append(acc_incoming)
+
+        if (self.close_loop_cl != None):
+            self.close_loop_cl.last_train_loss = mem_loss.item()
 
         softmax_loss = (replay_para['mem_ratio']*torch.sum(softmax_loss_full[:mem_num]) +\
                 replay_para['incoming_ratio'] * torch.sum(softmax_loss_full[mem_num:]))/total_num

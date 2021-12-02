@@ -10,22 +10,22 @@ class actor_critic_class(critic_class):
         self.RL_agent = RL_agent
         self.total_training_steps = training_steps
         self.params = params
-        if(params.RL_type == "RL_2ratioMemIter"):
-            if(params.mem_iter_max != params.mem_iter_min):
-                self.action_num = 2
-            else:
-                self.action_num = 1
+        action_dim_dict={
+            "iter":1,
+            "ratio_iter":2,
+            "aug_iter":2,
+            "ratio":1
+        }
+        self.action_dim =action_dim_dict[self.params.hp_action_space]
 
-        else:
-            self.action_num = 1
         self.ob_dim = ob_dim
         self.gamma = 1
         self.grad_norm_clipping = 10
 
 
 
-        self.initialize_critic(params,self.action_num,self.ob_dim)
-        self.init_actor_network(self.action_num, self.ob_dim)
+        self.initialize_critic(params,self.action_dim,self.ob_dim)
+        self.init_actor_network(self.action_dim, self.ob_dim)
 
         self.rl_opt = torch.optim.Adam(self.get_parameters(),
                                   lr=self.params.critic_lr,
@@ -41,13 +41,28 @@ class actor_critic_class(critic_class):
             action_dim,
             n_layers=self.n_layers,
             size=self.size,
-            output_activation="sigmoid",
+            output_activation=self.params.actor_output_activation,
         )
         self.actor= maybe_cuda(self.actor, self.params.cuda)
 
-    def get_actor_parameters(self):
 
-        return list(self.actor.parameters())
+        self.std_nn= build_mlp(
+            ob_dim,
+            action_dim,
+            n_layers=self.n_layers,
+            size=self.size,
+            output_activation=self.params.actor_output_activation,
+        )
+        self.std_nn= maybe_cuda(self.std_nn, self.params.cuda)
+
+    def get_actor_parameters(self):
+        if(self.params.std_trainable):
+
+            return list(self.actor.parameters()) + list(self.std_nn.parameters())
+        else:
+
+            return list(self.actor.parameters())
+
 
 
 
@@ -146,14 +161,14 @@ class actor_critic_class(critic_class):
 
 
 
-        #### perform actor update
+        #### perform actor update DDPG
         actions = self.actor(state_batch)
         actor_loss = -torch.sum(self.compute_q(state_batch,actions))
-        #print("train RL actor, loss", actor_loss.item())
+       # print("train RL actor, loss", actor_loss.item())
 
         self.rl_actor_opt.zero_grad()
         actor_loss.backward()
-        torch.nn.utils.clip_grad_value_(self.get_actor_parameters(), self.grad_norm_clipping)
+        #torch.nn.utils.clip_grad_value_(self.get_actor_parameters(), self.grad_norm_clipping)
 
         self.rl_actor_opt.step()
 

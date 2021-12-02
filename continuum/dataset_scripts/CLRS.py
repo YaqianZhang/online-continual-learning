@@ -38,11 +38,13 @@ class CLRS25(DatasetBase):
 
 
 
+
     def setup(self, cur_run):
         self.task_labels =[]
 
 
         for task_id in range(1,6):
+
 
             train_path_file = self.root + "/label/NC/run" + str(cur_run) + "/train_task" + str(task_id) + ".txt"
             train_data = pd.read_csv(train_path_file, delimiter="\t")

@@ -13,6 +13,7 @@ from utils.buffer.memory_manager import memory_manager_class
 from utils.utils import cutmix_data
 from utils.buffer.buffer_utils import get_grad_vector
 import copy
+from utils.aug_agent import aug_agent
 
 class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
     '''
@@ -30,8 +31,10 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         self.batch = params.batch
         self.verbose = params.verbose
         self.initialize()
+        self.RL_replay = None
 
         self.memory_manager = memory_manager_class(model, params)
+        self.aug_agent = aug_agent(params)
 
         ## save train acc
         self.mem_iter_list =[]
@@ -41,6 +44,12 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         self.train_acc_incoming = []
         self.train_acc_mem=[]
         self.test_acc_mem=[]
+
+        self.train_acc_incoming_org = []
+        self.train_acc_mem_org=[]
+        self.train_loss_incoming_org = []
+        self.train_loss_mem_org=[]
+
 
         self.train_loss_incoming = []
         self.train_loss_mem=[]
@@ -210,7 +219,13 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
 
             batch_x = torch.cat([mem_x,batch_x,])
             batch_y = torch.cat([mem_y,batch_y,])
-
+        # if (self.params.acc_no_aug):
+        #     self._compute_acc(batch_x,batch_y,mem_x.size(0))
+        if (self.params.randaug):
+            # print(concat_batch_x[0])
+            batch_x = self.aug_agent.aug_data(batch_x,mem_x.size(0),)
+        if (self.params.scraug):
+            batch_x = self.aug_agent.scr_aug_data(batch_x)
 
         return batch_x,batch_y,mem_x.size(0)
     def _compute_softmax_logits(self,x,need_grad = True):
@@ -446,6 +461,12 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         arr = np.array(self.train_acc_mem)
         np.save(prefix + "train_acc_mem.npy", arr)
 
+        arr = np.array(self.train_acc_incoming_org)
+        np.save(prefix + "train_acc_incoming_org.npy", arr)
+
+        arr = np.array(self.train_acc_mem_org)
+        np.save(prefix + "train_acc_mem_org.npy", arr)
+
         arr = np.array(self.train_acc_blc)
         np.save(prefix + "train_acc_blc.npy",arr)
 
@@ -459,6 +480,11 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
 
         arr = np.array(self.test_acc_mem)
         np.save(prefix + "test_acc_mem.npy", arr)
+        arr = np.array(self.train_loss_incoming_org)
+        np.save(prefix + "train_loss_incoming_org.npy", arr)
+
+        arr = np.array(self.train_loss_mem_org)
+        np.save(prefix + "train_loss_mem_org.npy", arr)
 
         arr = np.array(self.train_loss_incoming)
         np.save(prefix + "train_loss_incoming.npy", arr)

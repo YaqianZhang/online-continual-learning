@@ -21,7 +21,8 @@ class close_loop_cl(object):
     def update_task_reward(self):
         if (len(self.test_mem_loss_list) == 0): return
         self.task_tloss.append(self.test_mem_loss_list[-1])
-        #self.task_tloss_train.append(self.last_train_loss)
+        self.task_tloss_train.append(self.last_train_loss)
+        print(self.task_tloss_train)
         if (len(self.test_mem_acc_list) == 0): return
         self.task_tacc.append(self.test_mem_acc_list[-1])
         print("tacc update",self.task_tacc)
@@ -245,7 +246,7 @@ class close_loop_cl(object):
             print("Test memory is empty")
             return None
 
-        test_batch_x, test_batch_y = self.memory_manager.test_buffer.retrieve_all()
+        test_batch_x, test_batch_y = self.memory_manager.test_buffer.retrieve(retrieve_num=self.CL_agent.params.test_retrieve_num)
         logits = self.CL_agent._compute_softmax_logits(test_batch_x, need_grad=False)
 
         ce_all = torch.nn.CrossEntropyLoss(reduction='none')

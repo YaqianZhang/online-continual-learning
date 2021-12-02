@@ -1,7 +1,4 @@
-import torch
 from torch.utils import data
-from utils.buffer.buffer import Buffer
-from agents.base import ContinualLearner
 from continuum.data_utils import dataset_transform
 from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
@@ -9,10 +6,8 @@ from agents.exp_replay import  ExperienceReplay
 
 
 from RL.RL_replay_base import RL_replay
-from RL.RL_replay_MAB import RL_replay_MAB
 
 from RL.close_loop_cl import close_loop_cl
-from agents.scr import SupContrastReplay
 
 
 class ER_RL_addIter(ExperienceReplay):

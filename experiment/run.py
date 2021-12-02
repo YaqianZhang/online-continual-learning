@@ -41,7 +41,8 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
     np.save(prefix + "loss_list.npy", loss_list)
 
 
-
+    # if(params.batch != 9):
+    #     trick += str(params.batch)+"_"
     if (params.use_test_buffer):
         if(params.agent == "RLER"):
             pass
@@ -52,11 +53,12 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
-    if( params.RL_type != "NoRL" ):
+    #if( params.RL_type != "NoRL" ):
+    if(agent.RL_replay != None):
         print("save reward in run")
         if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
                                                                              "ER_RL_ratio","ER_RL_iter",
-                                                                             "ER_RL_addIter"]):
+                                                                             "ER_RL_addIter","ER_dyna_iter"]):
             agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
 
         else:

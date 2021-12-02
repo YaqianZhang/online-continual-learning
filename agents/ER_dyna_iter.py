@@ -4,22 +4,49 @@ from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
 from agents.exp_replay import  ExperienceReplay
 
+from scipy.stats import linregress
 
 from RL.RL_replay_base import RL_replay
 
 from RL.close_loop_cl import close_loop_cl
 
+import numpy as np
 
-class ER_RL_addIter(ExperienceReplay):
+class ER_dyna_iter(ExperienceReplay):
     def __init__(self, model, opt, params):
-        super(ER_RL_addIter, self).__init__(model, opt, params)
+        super(ER_dyna_iter, self).__init__(model, opt, params)
         #if(self.params.online_hyper_RL or self.params.scr_memIter ):
 
         self.close_loop_cl = close_loop_cl(self,model, self.memory_manager)
 
         self.RL_replay = RL_replay(params,self.close_loop_cl)
 
+    def set_dyna_iter(self,train_acc_list):
+        if(self.params.dyna_type == "random"):
+            return np.random.randint(low=self.params.mem_iter_min,high=self.params.mem_iter_max)
+        else:
+            self.dyna_train_acc(train_acc_list)
+    def dyna_train_acc(self,train_acc_list):
+        target_acc = 0.8
+        current_iter = len(train_acc_list)
+        if(current_iter ==0 or current_iter == None):
+            return 5
+        last_acc = train_acc_list[-1]
+        max_acc = np.max(train_acc_list)
+        #slope, intercept, r, p, se = linregress(np.arange(0,current_iter), train_acc_list)
 
+        #print(r, p, train_acc_list)
+        if(last_acc <0.8):
+            ## increase
+            mem_iter =current_iter + 2
+            if(mem_iter>self.params.mem_iter_max):
+                mem_iter = self.params.mem_iter_max
+            return mem_iter
+        elif( max_acc >0.85):
+            #print(r,p,train_acc_list)
+            return int(current_iter /2 )
+        else:
+            return current_iter
 
 
     def train_learner(self, x_train, y_train):
@@ -37,6 +64,7 @@ class ER_RL_addIter(ExperienceReplay):
         acc_batch = AverageMeter()
         acc_mem = AverageMeter()
         replay_para = None
+        train_acc_list=[]
 
         for ep in range(self.epoch):
             for i, batch_data in enumerate(train_loader):
@@ -45,38 +73,22 @@ class ER_RL_addIter(ExperienceReplay):
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
                 batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
-                self.set_memIter()
+                memiter = self.set_dyna_iter(train_acc_list)
+                self.RL_replay.RL_agent.greedy_action.append(memiter)
+                train_acc_list = []
+                train_loss_list=[]
 
-                concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
 
+                for j in range(memiter):
 
-                train_stats = self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i, self.replay_para,
-                                   mem_num=mem_num)
-
-                self.close_loop_cl.train_stats = train_stats #( acc_incoming=acc_incoming, incoming_loss=incoming_loss)
-
-                self.close_loop_cl.set_weighted_test_stats(concat_batch_y, mem_num, )
-                if(self.params.reward_within_batch == True):
-                    self.close_loop_cl.compute_testmem_loss()
-                    self.close_loop_CL.test_stats_prev = self.close_loop_CL.test_stats
-                    print(self.close_loop_cl.test_stats_prev)
-                replay_para = self.RL_replay.make_replay_decision_update_RL(i)  # and update RL
-                if (replay_para == None):
-                    replay_para = self.replay_para
-
-                for j in range(replay_para['mem_iter']):
 
                     concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
 
-                    self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i,replay_para,mem_num=mem_num)
+                    train_stats = self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i,replay_para,mem_num=mem_num)
+                    if(train_stats != None):
+                        train_acc_list.append(train_stats['acc_mem'])
+                        train_loss_list.append(train_stats['loss_mem'])
 
-
-                ## compute reward
-                self.close_loop_cl.compute_testmem_loss()
-
-                self.RL_replay.set_reward(replay_para['mem_iter'])
-
-                #self.close_loop_cl.set_train_stats( i, acc_incoming=acc_incoming, incoming_loss=incoming_loss)
 
 
                 self.memory_manager.update_memory(batch_x, batch_y)
@@ -92,7 +104,8 @@ class ER_RL_addIter(ExperienceReplay):
                         'running mem acc: {:.3f}'
                             .format(i, losses_mem.avg(), acc_mem.avg())
                     )
+                    print("memiter",memiter,train_acc_list,train_loss_list)
 
-                    print("replay_para", replay_para,"action:",self.RL_replay.RL_agent.greedy,self.RL_replay.action,)
+                    #print("replay_para", replay_para,"action:",self.RL_replay.RL_agent.greedy,self.RL_replay.action,)
         self.after_train()
 

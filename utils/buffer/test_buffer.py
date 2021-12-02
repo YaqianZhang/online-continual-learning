@@ -74,7 +74,7 @@ class Test_Buffer(torch.nn.Module):
 
 
 
-    def retrieve_all(self,):
+    def retrieve(self,retrieve_num=None):
         mem_x = []
         mem_y = []
         for i in self.mem_img.keys():

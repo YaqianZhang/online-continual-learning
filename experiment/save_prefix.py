@@ -29,6 +29,10 @@ def get_prefix(params,run):
         trick+="frz_"
     if(params.randaug):
         trick+="raug"+str(params.randaug_N)+str(params.randaug_M)+"_"
+    if (params.scraug):
+        trick += "scraug_"
+    if(params.batch != 10):
+        trick += "B"+str(params.batch)+"_"
 
     if(params.online_hyper_tune):
         trick += "hp"+str(params.online_hyper_freq)+params.online_hyper_lr_list_type+"_"
@@ -50,6 +54,10 @@ def get_prefix(params,run):
         trick += "NMC_"
     if (params.use_test_buffer):
         trick += "tbuf_"
+        if(params.test_retrieve_num !=300):
+            trick += "re"+str(params.test_retrieve_num)+"_"
+        if(params.test_buffer_type == "reservior_sampling"):
+            trick += "rs_"
         if(params.test_mem_type == "before"):
             trick += "bf" +"_"
         if(params.close_loop_mem_type == "low_acc"):
@@ -87,6 +95,8 @@ def get_prefix(params,run):
 
 
     ### replay_dynamics
+    if(params.agent == "ER_dyna_iter"):
+        trick += params.dyna_type[:3]+"_"
     if(params.dyna_mem_iter != "None"):
         if(params.dyna_mem_iter == "dyna"):
             trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
@@ -122,19 +132,15 @@ def get_prefix(params,run):
 
 
     ### Rl related
+    if(params.mem_iter_max != 1):
+
+        trick += str(params.mem_iter_max)
     if (params.actor_type == "random"):
         trick += "rndRL_"
-    if (params.RL_type != 'NoRL' and params.actor_type != "random"):
-
-        if(params.RL_type == "RL_memIter"):
-            trick += "RLmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-        elif(params.RL_type == "RL_2ratioMemIter" ):
-            trick += "RL2rmemIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-            trick += str(params.mem_ratio_max)+"_"+str(params.mem_ratio_min)+"_"
-        elif (params.RL_type == "RL_ratio_1para"):
-            trick += "RLratio1pr_" + str(params.mem_iter_max) + str(params.mem_iter_min) + "_"
-        else:
-            trick += params.RL_type + "_"
+    if (params.RL_type not in ['NoRL','DormantRL'] and params.actor_type != "random"):
+        trick+=params.hp_action_space+"_"
+        if(params.hp_action_space in ["iter", "ratio_iter","aug_iter"]):
+            trick += str(params.mem_iter_max) + str(params.mem_iter_min) + "_"
 
         if(params.virtual_update_times != 0):
             trick += "virtual"+str(params.virtual_update_times)+"_"
@@ -196,9 +202,13 @@ def get_prefix(params,run):
             trick+="t"+str(params.critic_task_layer)+"*"+str(params.critic_task_size)
             trick += "l" + str(params.critic_last_layer) + "*" + str(params.critic_last_size)+"_"
         if (params.critic_type == "actor_critic"):
+            if(params.std_trainable):
+                trick += "std_"
             trick += "qtype" + "actor_"
             if(params.ratio_sigma != 0.01):
                 trick += "var"+str(params.ratio_sigma)+"_"
+            if(params.actor_output_activation != "sigmoid"):
+                trick += "nosig_"
         if(params.ER_batch_size != 20):
             trick +="erb"+str(params.ER_batch_size)+"_"
         if(params.update_q_target_freq != 1000):

@@ -20,7 +20,8 @@ class memory_manager_class(object):
 
         ## test buffer
         if (params.RL_type != "NoRL"  or params.use_test_buffer == True):
-            self.test_buffer = Test_Buffer(params, )
+           #self.test_buffer = Test_Buffer(params, )
+            self.build_test_buffer()
             self.params.use_test_buffer = True
 
 
@@ -29,6 +30,12 @@ class memory_manager_class(object):
             self.tmp_buffer=Tmp_Buffer(model,params,self.buffer)
         else:
             self.tmp_buffer = None
+    def build_test_buffer(self):
+        if(self.params.test_buffer_type == "class_balance"):
+            self.test_buffer = Test_Buffer(self.params, )
+        else:
+            self.test_buffer = Buffer(self.model, self.params,mem_size=self.params.test_mem_size)
+
 
     # def update_task_number(self):
     #     self.buffer.task_seen_so_far += 1
@@ -41,7 +48,8 @@ class memory_manager_class(object):
 
     def reset_buffer(self, params):
         if (self.params.RL_type != "NoRL"):
-            self.test_buffer = Test_Buffer(params, )
+            self.build_test_buffer()
+            #self.test_buffer = Test_Buffer(params, )
         self.buffer = Buffer(self.model, params)
         self.buffer_add = Buffer(self.model, params)
     def compute_incoming_influence(self,incoming_x,incoming_y):

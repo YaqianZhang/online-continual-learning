@@ -6,7 +6,8 @@ from continuum.dataset_scripts.CLRS import CLRS25
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
 from agents.exp_replay import ExperienceReplay
-from agents.rl_exp_replay import RL_ExperienceReplay
+from agents.exp_replay_offline import ExperienceReplay_offline
+#from unused.rl_exp_replay import RL_ExperienceReplay
 from agents.agem import AGEM
 from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
@@ -15,7 +16,7 @@ from agents.icarl import Icarl
 from agents.lamaml import LAMAML
 from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
-#from utils.buffer.replay_times_update import Replay_times_update
+
 from utils.buffer.mir_retrieve import MIR_retrieve
 from utils.buffer.rl_retrieve import RL_retrieve
 from utils.buffer.gss_greedy_update import GSSGreedyUpdate
@@ -28,7 +29,7 @@ from agents.scr_rl_addIter import SCR_RL_iter
 from agents.ER_RL_ratio import ER_RL_ratio
 from agents.ER_RL_iter import ER_RL_iter
 from agents.ER_RL_addIter import ER_RL_addIter
-from agents.scr_meta import SupContrastReplay_meta
+from agents.ER_dyna_iter import ER_dyna_iter
 from utils.buffer.sc_retrieve import Match_retrieve
 from utils.buffer.mem_match import MemMatch_retrieve
 
@@ -44,10 +45,12 @@ data_objects = {
 }
 agents = {
     'ER': ExperienceReplay,
+    "ER_offline":ExperienceReplay_offline,
     "ER_RL_ratio":ER_RL_ratio,
 "ER_RL_iter":ER_RL_iter,
 "ER_RL_addIter":ER_RL_addIter,
-    'RLER': RL_ExperienceReplay,
+    "ER_dyna_iter":ER_dyna_iter,
+    #'RLER': RL_ExperienceReplay,
     'LAMAML': LAMAML,
     'EWC': EWC_pp,
     'AGEM': AGEM,
@@ -58,7 +61,7 @@ agents = {
     'SCR': SupContrastReplay,
     'SCR_RL_ratio':SCR_RL_ratio,
 'SCR_RL_iter':SCR_RL_iter,
-    'SCR_META':SupContrastReplay_meta,
+    #'SCR_META':SupContrastReplay_meta,
 }
 
 retrieve_methods = {

@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     ########################Agent#########################
     parser.add_argument('--agent', dest='agent', default='ER',
-                        choices=['LAMAML','RLER','ER', "ER_RL_ratio","ER_RL_addIter","ER_RL_iter",'EWC', 'AGEM', 'CNDPM', 'LWF', 'ICARL', 'GDUMB',
+                        choices=["ER_offline",'LAMAML','RLER','ER', "ER_RL_ratio","ER_RL_addIter","ER_dyna_iter","ER_RL_iter",'EWC', 'AGEM', 'CNDPM', 'LWF', 'ICARL', 'GDUMB',
                                  'ASER','SCR','SCR_META',
                                  "SCR_RL_ratio","SCR_RL_iter"],
                         help='Agent selection  (default: %(default)s)')
@@ -263,6 +263,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
                         help='')
+    parser.add_argument('--mem_iter_std', dest='mem_iter_std', default=0.3, type=int,
+                        help='')
 
 
     parser.add_argument('--mem_ratio_max', default=1.5,
@@ -293,7 +295,9 @@ if __name__ == "__main__":
                         help='Test Memory buffer batch size (default: %(default)s)')
     parser.add_argument("--use_test_buffer",dest='use_test_buffer',default=False,type=boolean_string,
                         help='If True, evaluate model on the test buffer during CL training')
-
+    parser.add_argument("--test_buffer_type",default="class_balance",choices=["class_balance","reservior_sampling"])
+    parser.add_argument("--test_retrieve_num",default=300,type=int)
+    parser.add_argument("--dyna_type",default="train_acc",choices=["random","train_acc"])
     parser.add_argument('--use_tmp_buffer',dest='use_tmp_buffer',default=False,type=boolean_string,
                         help='If True, use a tmp buffer to store the to-be-insert samples from new task/replace indices '
                              'and insert these into memory at the end of new task')
@@ -316,8 +320,9 @@ if __name__ == "__main__":
                         help='Action size (default: %(default)s)')
     parser.add_argument('--actor_type', dest='actor_type', default="greedy",
                         type=str,)
+    parser.add_argument("--std_trainable",default=False)
     parser.add_argument("--action_space_type",dest="action_space_type",default="sparse",type=str,choices=["cont","monly_dense","ionly_dense","ionly","upper","posneu","sparse","medium","dense"])
-
+    parser.add_argument("--hp_action_space",default="ratio_iter",choices=["ratio","ratio_iter","iter","aug_iter"])
     ## reward
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
                         choices=["test_loss_v_rlt","test_alpha01_loss_acc","test_loss_old","test_loss_median","test_loss_acc","acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
@@ -362,6 +367,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--critic_type", dest='critic_type', default='critic', type=str,
                         choices=["task_critic","critic","actor_critic",])
+    parser.add_argument("--actor_output_activation",default="sigmoid",choices=["sigmoid","relu","identity"])
     parser.add_argument("--critic_task_layer",default=0,type=int)
     parser.add_argument("--critic_last_layer", default=0, type=int)
     parser.add_argument("--critic_task_size",default=10,type=int)
@@ -435,6 +441,7 @@ if __name__ == "__main__":
     parser.add_argument('--test', dest='test', default=" ", type=str,choices=["not_reset"],
                         help='')
     parser.add_argument('--debug_mode',default=False, type=boolean_string)
+    parser.add_argument('--acc_no_aug',default=True)
 
     parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
                         type=int,

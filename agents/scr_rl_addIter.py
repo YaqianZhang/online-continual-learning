@@ -1,14 +1,10 @@
-import torch
 from torch.utils import data
 
 from continuum.data_utils import dataset_transform
-from utils.setup_elements import transforms_match, input_size_match
+from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
 
-import numpy as np
-
 from RL.RL_replay_base import RL_replay
-from RL.RL_replay_MAB import RL_replay_MAB
 
 from RL.close_loop_cl import close_loop_cl
 from agents.scr import SupContrastReplay
@@ -70,18 +66,14 @@ class SCR_RL_iter(SupContrastReplay):
                     self.close_loop_cl.compute_testmem_loss()
                     self.close_loop_CL.test_stats_prev = self.close_loop_CL.test_stats
                     print(self.close_loop_cl.test_stats_prev)
-                replay_para = self.RL_replay.make_replay_decision(i)  # and update RL
+                replay_para = self.RL_replay.make_replay_decision_update_RL(i)  # and update RL
 
                 if (replay_para == None):
                     replay_para = self.replay_para
 
                 for j in range(replay_para['mem_iter']):
                     concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
-                    if (self.params.randaug):
-                        # print(concat_batch_x[0])
 
-                        self.set_aug_para(self.params.randaug_N, replay_para['randaug_M'])
-                        concat_batch_x = self.aug_data(concat_batch_x)
                     self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i, replay_para,
                                        mem_num=mem_num)
 

@@ -7,7 +7,7 @@ from utils.buffer.buffer_utils import BufferClassTracker
 from utils.setup_elements import n_classes
 
 class Buffer(torch.nn.Module):
-    def __init__(self, model, params,RL_agent=None, RL_env=None):
+    def __init__(self, model, params,mem_size=None,RL_agent=None, RL_env=None,):
         super().__init__()
         self.params = params
         self.model = model
@@ -17,9 +17,12 @@ class Buffer(torch.nn.Module):
         self.buffer_used_steps = 0
         self.device = "cuda" if self.params.cuda else "cpu"
 
+        if(mem_size==None):
+            mem_size = self.params.mem_size
+
         # define buffer
-        buffer_size =params.mem_size
-        self.buffer_size = params.mem_size
+        buffer_size =mem_size
+        self.buffer_size = mem_size
         print('buffer has %d slots' % buffer_size)
         input_size = input_size_match[params.data]
         self.buffer_img = torch.FloatTensor(buffer_size, *input_size).fill_(0)

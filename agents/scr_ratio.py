@@ -1,14 +1,10 @@
-import torch
 from torch.utils import data
 
 from continuum.data_utils import dataset_transform
-from utils.setup_elements import transforms_match, input_size_match
+from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
 
-import numpy as np
-
 from RL.RL_replay_base import RL_replay
-from RL.RL_replay_MAB import RL_replay_MAB
 
 from RL.close_loop_cl import close_loop_cl
 from agents.scr import SupContrastReplay
@@ -58,7 +54,7 @@ class SCR_RL_ratio(SupContrastReplay):
 
                     self.close_loop_cl.set_weighted_test_stats(batch_y, mem_num, )
 
-                    replay_para = self.RL_replay.make_replay_decision(i)  # and update RL
+                    replay_para = self.RL_replay.make_replay_decision_update_RL(i)  # and update RL
 
                     self._batch_update(batch_x, batch_y, losses_batch, acc_batch, i, replay_para, mem_num=mem_num)
 
@@ -108,7 +104,7 @@ class SCR_RL_ratio(SupContrastReplay):
     #             batch_x = maybe_cuda(batch_x, self.cuda)
     #             batch_y = maybe_cuda(batch_y, self.cuda)
     #
-    #             replay_para = self.RL_replay.make_replay_decision(i)
+    #             replay_para = self.RL_replay.make_replay_decision_update_RL(i)
     #             batch_x, batch_y = self.memory_manager.update_before_training(batch_x, batch_y)
     #
     #             scr_loss,combined_batch,combined_labels,mem_num  = self.perform_scr_update(batch_x, batch_y, losses)
