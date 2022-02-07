@@ -130,10 +130,13 @@ class CLRS25(DatasetBase):
             # idx = np.random.randint(0,total_len,train_len)
             # train_idx_list = [self.train_id_all[i] for i in idx]
             # train_label = [self.train_label_all[i] for i in idx]
-            random.shuffle(self.train_id_all)
-            train_idx_list = self.train_id_all
-            random.shuffle(self.train_label_all)
-            train_label = self.train_label_all
+            indices = np.arange(len(self.train_label_all))
+            np.random.shuffle(indices)
+
+            #random.shuffle(self.train_id_all)
+            train_idx_list =list( np.array(self.train_id_all)[indices])
+            #random.shuffle(self.train_label_all)
+            train_label = list(np.array(self.train_label_all)[indices])
 
 
 

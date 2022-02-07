@@ -1,28 +1,17 @@
 import torch
 from torch.utils import data
-from utils.buffer.buffer import Buffer
 from agents.base import ContinualLearner
 from continuum.data_utils import dataset_transform
-from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
-from utils.utils import cutmix_data,cutmix_data_two_data
-import numpy as np
 from RL.RL_replay_base import RL_replay
 from RL.close_loop_cl import close_loop_cl
 from torchvision.transforms import transforms
-from utils.augmentations import RandAugment
 
-import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
 import numpy as np
 import torch
-from PIL import Image
-from kornia.augmentation import RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomGrayscale
 import torch.nn as nn
-from utils.setup_elements import transforms_match, input_size_match
-
-
-
-
+from utils.setup_elements import transforms_match
+from utils.utils import cutmix_data
 
 
 class ExperienceReplay(ContinualLearner):
@@ -122,64 +111,86 @@ class ExperienceReplay(ContinualLearner):
 
     def _batch_update(self,batch_x,batch_y,losses_batch,acc_batch,i,replay_para=None,mem_num=0):
 
-
+        STOP_FLAG = False
         if(replay_para == None):
             replay_para = self.replay_para
 
 
         # if(self.params.test_mem_recycle):
         #     recycle_test_x = recycle.store_tmp(img,cls_max)
+        ## todo : cutmix
+        do_cutmix = self.params.do_cutmix and np.random.rand(1) < self.params.cutmix_prob
+        if do_cutmix:
+            # print(x.shape)
+            ce = torch.nn.CrossEntropyLoss(reduction='mean')
+
+            x, labels_a, labels_b, lam = cutmix_data(x=batch_x, y=batch_y, alpha=1.0,index="None")
+            #logits = self._compute_softmax_logits(x)
+            logits = self.model.forward(x)
+
+            loss = lam * ce(logits, labels_a) + (1 - lam) * ce(
+                logits, labels_b
+            )
+            avrg_acc = 0
+            train_stats = None
 
 
-
-
-
-        logits = self.model.forward(batch_x)
-        _, pred_label = torch.max(logits, 1)
-        acc = (pred_label == batch_y)
-
-        ce_all = torch.nn.CrossEntropyLoss(reduction='none')
-        softmax_loss_full = ce_all(logits, batch_y)
-
-        total_num = batch_x.shape[0]
-        avrg_acc = acc.sum().item() / total_num
-        #loss = torch.mean(softmax_loss_full)
-
-
-
-
-
-
-        acc_incoming = acc[mem_num:].sum().item() / (total_num - mem_num)
-
-        incoming_loss = torch.mean(softmax_loss_full[mem_num:])
-        self.train_loss_incoming.append(incoming_loss.item())
-        self.train_acc_incoming.append(acc_incoming)
-
-        if(mem_num>0):
-
-            acc_mem = acc[:mem_num].sum().item() / mem_num
-            mem_loss = torch.mean(softmax_loss_full[:mem_num])
-            self.train_acc_mem.append(acc_mem)
-            self.train_loss_mem.append(mem_loss.item())
-            if(self.close_loop_cl != None):
-
-                self.close_loop_cl.last_train_loss = mem_loss.item()
-
-
-            loss = replay_para['mem_ratio'] * mem_loss+ \
-                   replay_para['incoming_ratio'] * incoming_loss
-            train_stats = {'acc_incoming': acc_incoming,
-                           'acc_mem': acc_mem,
-                           "loss_incoming": incoming_loss.item(),
-                           "loss_mem": mem_loss.item(),
-                           "batch_num": i,
-                           }
         else:
-            loss = replay_para['incoming_ratio'] * incoming_loss
-            acc_mem = None
-            mem_loss = None
-            train_stats=None
+
+
+
+
+
+            logits = self.model.forward(batch_x)
+            _, pred_label = torch.max(logits, 1)
+            acc = (pred_label == batch_y)
+
+            ce_all = torch.nn.CrossEntropyLoss(reduction='none')
+            softmax_loss_full = ce_all(logits, batch_y)
+
+            total_num = batch_x.shape[0]
+            avrg_acc = acc.sum().item() / total_num
+            #loss = torch.mean(softmax_loss_full)
+
+
+
+
+
+
+            acc_incoming = acc[mem_num:].sum().item() / (total_num - mem_num)
+
+            incoming_loss = torch.mean(softmax_loss_full[mem_num:])
+            self.train_loss_incoming.append(incoming_loss.item())
+            self.train_acc_incoming.append(acc_incoming)
+
+            if(mem_num>0):
+
+                acc_mem = acc[:mem_num].sum().item() / mem_num
+                mem_loss = torch.mean(softmax_loss_full[:mem_num])
+                self.train_acc_mem.append(acc_mem)
+                self.train_loss_mem.append(mem_loss.item())
+                if(self.close_loop_cl != None):
+
+                    self.close_loop_cl.last_train_loss = mem_loss.item()
+
+
+                #loss = replay_para['mem_ratio'] * mem_loss+ \
+                       #replay_para['incoming_ratio'] * incoming_loss
+                loss = torch.mean(softmax_loss_full)
+                train_stats = {'acc_incoming': acc_incoming,
+                               'acc_mem': acc_mem,
+                               "loss_incoming": incoming_loss.item(),
+                               "loss_mem": mem_loss.item(),
+                               "batch_num": i,
+                               }
+                if(mem_loss> incoming_loss*3):
+                    STOP_FLAG = True
+            else:
+                loss = torch.mean(softmax_loss_full)
+                #loss = replay_para['incoming_ratio'] * incoming_loss
+                acc_mem = None
+                mem_loss = None
+                train_stats=None
 
 
         acc_batch.update(avrg_acc, batch_y.size(0))
@@ -193,7 +204,7 @@ class ExperienceReplay(ContinualLearner):
 
 
 
-        return  train_stats
+        return  train_stats, STOP_FLAG
 
     # def tensor_to_image(self,tensor):
     #     tensor = tensor * 255
@@ -242,8 +253,10 @@ class ExperienceReplay(ContinualLearner):
                 batch_y = maybe_cuda(batch_y, self.cuda)
                 batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
                 self.set_memIter()
+                memiter=self.mem_iters
 
                 for j in range(self.mem_iters):
+
                     #self.set_aug_para(N, int(j*30/self.mem_iters), incoming_M=int(j*30/self.mem_iters))
 
 
@@ -252,8 +265,13 @@ class ExperienceReplay(ContinualLearner):
 
 
 
-                    self._batch_update(concat_batch_x,concat_batch_y, losses_batch, acc_batch, i,mem_num=mem_num)
+                    stats, STOP_FLAG = self._batch_update(concat_batch_x,concat_batch_y, losses_batch, acc_batch, i,mem_num=mem_num)
 
+                    if(STOP_FLAG and self.params.dyna_mem_iter == "STOP"):
+                        memiter=j
+                        break
+
+                self.mem_iter_list.append(memiter)
                 if(self.params.use_test_buffer):
                     self.close_loop_cl.compute_testmem_loss()
                 self.memory_manager.update_memory(batch_x, batch_y)
@@ -269,7 +287,7 @@ class ExperienceReplay(ContinualLearner):
                     #     'running mem acc: {:.3f}'
                     #         .format(i, losses_mem.avg(), acc_mem.avg())
                     # )
-                    print("mem_iter", self.mem_iters)
+                    print("mem_iter", memiter,concat_batch_y.shape)
         self.after_train()
 
 

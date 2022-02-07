@@ -11,6 +11,7 @@ class memory_manager_class(object):
 
         ## main buffer
         self.buffer = Buffer(model, params)
+        self.current_performance = []
 
         ## additional buffer
         if (self.params.switch_buffer_type in [ "two_buffer","dyna_buffer"]):
@@ -56,7 +57,7 @@ class memory_manager_class(object):
         return self.buffer.compute_incoming_influence(x=incoming_x,y=incoming_y)
 
 
-    def retrieve_from_mem(self,batch_x, batch_y,task_seen):
+    def retrieve_from_mem(self,batch_x, batch_y,task_seen,):
 
         if (self.params.switch_buffer_type == "one_buffer"):
             mem_x, mem_y = self.buffer.retrieve(x=batch_x, y=batch_y)

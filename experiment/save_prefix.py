@@ -20,17 +20,30 @@ def get_prefix_time(params,):
 def get_prefix(params,run):
 
     trick = ""
+    if(params.resnet_size == "normal"):
+        trick+="res_"
     if(params.joint_replay_type != "together"):
         trick += "replaySep_"
-
+    if(params.dyna_mem_iter =="STOP"):
+        trick+= "stop_"
     if(params.only_task_seen):
         trick+="onlySeen_"
     if(params.frozen_old_fc):
         trick+="frz_"
-    if(params.randaug):
-        trick+="raug"+str(params.randaug_N)+str(params.randaug_M)+"_"
+    if(params.aug_start>0):
+        trick += str(params.aug_start) + "_"
+
+    if(params.randaug_type == "dynamic"):
+        trick += "raug_dyna_"
+    else:
+        if(params.randaug):
+            trick+="raug"+str(params.randaug_N)+str(params.randaug_M)+"_"
+            if(params.aug_target != "both"):
+                trick += params.aug_target+"_"
     if (params.scraug):
         trick += "scraug_"
+        if (params.aug_target != "both"):
+            trick += params.aug_target + "_"
     if(params.batch != 10):
         trick += "B"+str(params.batch)+"_"
 
@@ -81,7 +94,8 @@ def get_prefix(params,run):
 
     ### data augumentation ###
     if (params.do_cutmix):
-        trick += "cmix"+str(params.cutmix_prob)+"_"+str(params.cutmix_batch)+"_"
+        #trick += "cmix"+str(params.cutmix_prob)+"_"+str(params.cutmix_batch)+"_"
+        trick += "cmix"+"_"
         if(params.cutmix_type != "random"):
             trick +=params.cutmix_type +"_"
 
@@ -97,11 +111,11 @@ def get_prefix(params,run):
     ### replay_dynamics
     if(params.agent == "ER_dyna_iter"):
         trick += params.dyna_type[:3]+"_"
-    if(params.dyna_mem_iter != "None"):
-        if(params.dyna_mem_iter == "dyna"):
-            trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
-        else:
-            trick += "dMIter_"+params.dyna_mem_iter
+    # if(params.dyna_mem_iter != "None"):
+    #     if(params.dyna_mem_iter == "dyna"):
+    #         trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"
+    #     else:
+    #         trick += "dMIter_"+params.dyna_mem_iter
     if (params.mem_iters > 1):
         trick += "mIter" + str(params.mem_iters)+"_"
         if (params.start_mem_iters > -1):
@@ -125,16 +139,16 @@ def get_prefix(params,run):
             raise NotImplementedError("undefined switch buffer")
 
     if (params.test_mem_size != 300):
-        trick += "tmem" + str(params.test_mem_size) + "_"
+        trick += "tm" + str(params.test_mem_size) + "_"
     # if (params.test_mem_batchSize > 10):
     #     trick += "testBch" + str(params.test_mem_batchSize) + "_"
 
 
 
     ### Rl related
-    if(params.mem_iter_max != 1):
-
-        trick += str(params.mem_iter_max)
+    # if(params.mem_iter_max != 1):
+    #
+    #     trick += str(params.mem_iter_max)
     if (params.actor_type == "random"):
         trick += "rndRL_"
     if (params.RL_type not in ['NoRL','DormantRL'] and params.actor_type != "random"):
@@ -149,7 +163,7 @@ def get_prefix(params,run):
 
 
         #reward
-        trick += params.reward_type+"_" ## todo: fix RL_type logic
+        trick += params.reward_type+"_"
         trick += str(params.reward_rg)+"_"
         if(params.reward_within_batch):
             trick += "wthin_"
@@ -166,8 +180,8 @@ def get_prefix(params,run):
             trick += "Done"+str(params.done_freq)+"_"
             if(params.double_DQN == False):
                 trick += "nodouble_"
-        if(params.dynamics_type == "next_batch"):
-            trick+="nxtBch"+'_'
+        # if(params.dynamics_type == "next_batch"):
+        #     trick+="nxtBch"+'_'
         if (params.dynamics_type == "within_batch"):
             trick += "wthBch" + '_'
 
@@ -186,53 +200,54 @@ def get_prefix(params,run):
 
         if(params.RL_start_batchstep != 0 ):
             trick +="bstart"+str(params.RL_start_batchstep)+"_"
-        trick += str(params.task_start_mem_ratio)+str(params.task_start_incoming_ratio)+"_"
+        # trick += str(params.task_start_mem_ratio)+str(params.task_start_incoming_ratio)+"_"
 
 
 
-        ##critic_training
         trick += params.rl_exp_type+"_"
-        trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
-        # trick += "ERbch"+str(params.ER_batch_size)+"_"
-        if(params.q_function_type != "lstm"):
-            trick += "q"+params.q_function_type[:3]+"_"
-        if(params.critic_type == "task_critic"):
-            trick +="qtype"+params.critic_type[:2]+"_"
+        ##critic_training
+        if(params.RL_type == "RL_MDP"):
+            trick += "critic"+str(params.critic_layer_size)+"_"+str(params.critic_nlayer)+"_"
+            # trick += "ERbch"+str(params.ER_batch_size)+"_"
+            if(params.q_function_type != "lstm"):
+                trick += "q"+params.q_function_type[:3]+"_"
+            if(params.critic_type == "task_critic"):
+                trick +="qtype"+params.critic_type[:2]+"_"
 
-            trick+="t"+str(params.critic_task_layer)+"*"+str(params.critic_task_size)
-            trick += "l" + str(params.critic_last_layer) + "*" + str(params.critic_last_size)+"_"
-        if (params.critic_type == "actor_critic"):
-            if(params.std_trainable):
-                trick += "std_"
-            trick += "qtype" + "actor_"
-            if(params.ratio_sigma != 0.01):
-                trick += "var"+str(params.ratio_sigma)+"_"
-            if(params.actor_output_activation != "sigmoid"):
-                trick += "nosig_"
-        if(params.ER_batch_size != 20):
-            trick +="erb"+str(params.ER_batch_size)+"_"
-        if(params.update_q_target_freq != 1000):
-            trick+="targetq"+str(params.update_q_target_freq)
-        if(params.critic_use_model):
-            trick += "Qmodel"+"_"
+                trick+="t"+str(params.critic_task_layer)+"*"+str(params.critic_task_size)
+                trick += "l" + str(params.critic_last_layer) + "*" + str(params.critic_last_size)+"_"
+            if (params.critic_type == "actor_critic"):
+                if(params.std_trainable):
+                    trick += "std_"
+                trick += "qtype" + "actor_"
+                if(params.ratio_sigma != 0.01):
+                    trick += "var"+str(params.ratio_sigma)+"_"
+                if(params.actor_output_activation != "sigmoid"):
+                    trick += "nosig_"
+            if(params.ER_batch_size != 20):
+                trick +="erb"+str(params.ER_batch_size)+"_"
+            if(params.update_q_target_freq != 1000):
+                trick+="targetq"+str(params.update_q_target_freq)
+            if(params.critic_use_model):
+                trick += "Qmodel"+"_"
 
-        trick += params.critic_ER_type+"_"
-        if(params.critic_training_start != 80):
-            trick += "qstart"+str(params.critic_training_start)+"_"
-
-        if(params.critic_lr_type != "basic"):
-            trick +="rllr"+params.critic_lr_type+"_"
-        if(params.critic_wd >0):
-            trick +="wd-6"+"_"
-        if(params.critic_lr != 1e-3):
-            trick += str(params.critic_lr)
-        # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
-        if(params.critic_training_iters != 1):
-            trick += "crtitr" + str(params.critic_training_iters) + "_"
-        if(params.critic_recent_steps != 100):
-            trick += "criticRct"+str(params.critic_recent_steps)+"_"
-        if(params.reward_test_type != "None"):
-            trick += params.reward_test_type + "_"
+            # trick += params.critic_ER_type+"_"
+            # if(params.critic_training_start != 80):
+            #     trick += "qstart"+str(params.critic_training_start)+"_"
+            #
+            # if(params.critic_lr_type != "basic"):
+            #     trick +="rllr"+params.critic_lr_type+"_"
+            # if(params.critic_wd >0):
+            #     trick +="wd-6"+"_"
+            # if(params.critic_lr != 1e-3):
+            #     trick += str(params.critic_lr)
+            # # trick += "crtBchSize"+str(params.ER_batch_size)+"_"
+            # if(params.critic_training_iters != 1):
+            #     trick += "crtitr" + str(params.critic_training_iters) + "_"
+            # if(params.critic_recent_steps != 100):
+            #     trick += "criticRct"+str(params.critic_recent_steps)+"_"
+            # if(params.reward_test_type != "None"):
+            #     trick += params.reward_test_type + "_"
 
     if(params.test == "not_reset"):
         trick += "no_reset"

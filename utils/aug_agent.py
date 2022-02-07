@@ -5,10 +5,13 @@ from torchvision.transforms import transforms
 from utils.augmentations import RandAugment
 import torch
 from utils.utils import maybe_cuda
+import imgaug.augmenters as iaa
+import numpy as np
 
 class aug_agent(object):
-    def __init__(self,params):
+    def __init__(self,params,CL_agent=None):
         self.params = params
+        self.CL_agent = CL_agent
         _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
 
         self.transform_train = transforms.Compose([
@@ -22,6 +25,7 @@ class aug_agent(object):
         #     transforms.Normalize(_CIFAR_MEAN, _CIFAR_STD),
         # ])
 
+        self.aug = iaa.RandAugment(n=self.params.randaug_N, m=self.params.randaug_M)
         self.transform_train.transforms.insert(0, RandAugment(self.params.randaug_N, self.params.randaug_M))
 
         self.scr_transform = nn.Sequential(
@@ -32,6 +36,21 @@ class aug_agent(object):
             RandomGrayscale(p=0.2)
 
         )
+
+        if (self.params.aug_target == "both"):
+            self.mem_aug = True
+            self.incoming_aug = True
+        elif (self.params.aug_target == "mem"):
+            self.mem_aug = True
+            self.incoming_aug = False
+        elif (self.params.aug_target == "incoming"):
+            self.mem_aug = False
+            self.incoming_aug = True
+        else:
+            self.mem_aug = False
+            self.incoming_aug = False
+
+    #def set_aug_para_old(self,N,M):
 
     def set_aug_para(self, N, M,incoming_N=1,incoming_M=14):
         self.transform_train = transforms.Compose([
@@ -46,6 +65,7 @@ class aug_agent(object):
         # ])
 
         self.transform_train.transforms.insert(0, RandAugment(N, M))
+        self.aug = iaa.RandAugment(n=N, m=M)
 
 
         # self.transform_train_incoming = transforms.Compose([
@@ -60,22 +80,87 @@ class aug_agent(object):
         # # ])
         #
         # self.transform_train_incoming.transforms.insert(0, RandAugment(incoming_N, incoming_M))
-
-    def aug_data(self,concat_batch_x,mem_num):
+    # def aug_data_old(self,concat_batch_x,mem_num):
+    #     if (self.params.randaug_type == "dynamic"):
+    #         self.set_aug_para(1, self.CL_agent.task_seen)
+    #     n, c, w, h = concat_batch_x.shape
+    #
+    #     images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
+    #     aug_concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
+    #     aug_concat_batch_x = maybe_cuda(torch.cat(aug_concat_batch_x, dim=0))
+    #     return aug_concat_batch_x
+    def aug_data_old(self,concat_batch_x,mem_num):
+        if (self.params.randaug_type == "dynamic"):
+            self.set_aug_para(1, self.CL_agent.task_seen)
         n, c, w, h = concat_batch_x.shape
 
-        #mem_images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(mem_num)]
-        #incoming_images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(mem_num,n)]
+        mem_images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(mem_num)]
+        incoming_images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(mem_num,n)]
+        if(self.mem_aug and mem_num>0):
+            aug_mem = [self.transform_train(image).reshape([1, c, w, h]) for image in mem_images]
+            aug_mem = maybe_cuda(torch.cat(aug_mem,dim=0))
+        else:
+            aug_mem = concat_batch_x[:mem_num,:,:,:]
+        if(self.incoming_aug):
+            aug_incoming = [self.transform_train(image).reshape([1, c, w, h]) for image in incoming_images]
+            aug_incoming = maybe_cuda(torch.cat(aug_incoming,dim=0))
+        else:
+            aug_incoming = concat_batch_x[mem_num:,:,:,:]
+        # if(mem_num>0):
+        #     aug_concat_batch_x = aug_mem + aug_incoming
+        # else:
+        #
+        #     aug_concat_batch_x =  aug_incoming
 
-        #aug_concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in mem_images]
-        #aug_concat_batch_x += [self.transform_train_incoming(image).reshape([1, c, w, h]) for image in incoming_images]
+        if(mem_num>0):
+            aug_concat_batch_x = maybe_cuda(torch.cat((aug_mem,aug_incoming), dim=0))
+        else:
+            aug_concat_batch_x = maybe_cuda(aug_incoming)
 
-        images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
-        aug_concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
-        aug_concat_batch_x = maybe_cuda(torch.cat(aug_concat_batch_x, dim=0))
         return aug_concat_batch_x
-    def scr_aug_data(self,combined_batch):
-        return self.scr_transform(combined_batch)
+    def aug_data(self,concat_batch_x,mem_num):
+        if(self.params.randaug_type == "dynamic"):
+            self.set_aug_para(1,self.CL_agent.task_seen)
+        n, c, w, h = concat_batch_x.shape
+        #
+        # images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
+        concat_batch_x =concat_batch_x.cpu().numpy().astype(np.uint8)
+        aug_concat_batch_x = self.aug(images = concat_batch_x.reshape((n,w,h,c)))
+        aug_concat_batch_x = aug_concat_batch_x.astype(np.float32).reshape((n,c,w,h))
+        aug_concat_batch_x = maybe_cuda(torch.tensor(aug_concat_batch_x))
+
+        # aug_concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
+        # aug_concat_batch_x = maybe_cuda(torch.cat(aug_concat_batch_x, dim=0))
+        return aug_concat_batch_x
+    def scr_aug_data(self,concat_batch_x,mem_num):
+        #print("scr-aug")
+        #return self.scr_transform(combined_batch)
+        n, c, w, h = concat_batch_x.shape
+
+        mem_images = concat_batch_x[:mem_num,:,:,:]
+        incoming_images = concat_batch_x[mem_num:,:,:,:]
+        if(self.mem_aug and mem_num>0):
+            aug_mem =self.scr_transform(mem_images)
+            #aug_mem = maybe_cuda(torch.cat(aug_mem,dim=0))
+        else:
+            aug_mem = mem_images #concat_batch_x[:mem_num,:,:,:]
+        if(self.incoming_aug):
+            aug_incoming = self.scr_transform(incoming_images) #[self.transform_train(image).reshape([1, c, w, h]) for image in incoming_images]
+            #aug_incoming = maybe_cuda(torch.cat(aug_incoming,dim=0))
+        else:
+            aug_incoming = incoming_images #concat_batch_x[mem_num:,:,:,:]
+        # if(mem_num>0):
+        #     aug_concat_batch_x = aug_mem + aug_incoming
+        # else:
+        #
+        #     aug_concat_batch_x =  aug_incoming
+
+        if(mem_num>0):
+            aug_concat_batch_x = maybe_cuda(torch.cat((aug_mem,aug_incoming), dim=0))
+        else:
+            aug_concat_batch_x = maybe_cuda(aug_incoming)
+
+        return aug_concat_batch_x
 
 
 

@@ -23,7 +23,7 @@ from experiment.save_prefix import get_prefix
 def save_stats_acc(params,accuracy_list,run=1,loss_list=[]):
     prefix = "results/"+str(params.seed) + "/" +params.exp_name+"_"+params.agent+"_"+params.data+"_"+ "tune"
 
-    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
+    #print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
     np.save(prefix + "loss_list.npy", loss_list)
 
@@ -36,7 +36,7 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
     np.save(prefix + "running_time.npy", running_time)
 
 
-    print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
+    #print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
     np.save(prefix + "loss_list.npy", loss_list)
 
@@ -54,19 +54,19 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
     #if( params.RL_type != "NoRL" ):
-    if(agent.RL_replay != None):
-        print("save reward in run")
-        if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
-                                                                             "ER_RL_ratio","ER_RL_iter",
-                                                                             "ER_RL_addIter","ER_dyna_iter"]):
-            agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
-
-        else:
-            agent.RL_agent.save_RL_stats(prefix) # q, reward, action
-
-            #agent.RL_env.save_task_reward(prefix)
-
-    agent.save_mem_iters(prefix) ## memiter raio
+    # if(agent.RL_replay != None):
+    #     print("save reward in run")
+    #     if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
+    #                                                                          "ER_RL_ratio","ER_RL_iter",
+    #                                                                          "ER_RL_addIter","ER_dyna_iter"]):
+    #         agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
+    #
+    #     else:
+    #         agent.RL_agent.save_RL_stats(prefix) # q, reward, action
+    #
+    #         #agent.RL_env.save_task_reward(prefix)
+    #
+    # agent.save_mem_iters(prefix) ## memiter raio
 
 def reset_model(model):
     for layer in model.children():

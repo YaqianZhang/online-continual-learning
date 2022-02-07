@@ -206,3 +206,35 @@ class SupConResNet(nn.Module):
 
     def features(self, x):
         return self.encoder.features(x)
+class SupConResNet_normal(nn.Module):
+    """backbone + projection head"""
+    def __init__(self, dim_in=160, head='mlp', feat_dim=128):
+        super(SupConResNet_normal, self).__init__()
+        self.encoder = ResNet18(100)
+        if head == 'linear':
+            self.head = nn.Linear(dim_in, feat_dim)
+        elif head == 'mlp':
+            self.head = nn.Sequential(
+                nn.Linear(dim_in, dim_in),
+                nn.ReLU(inplace=True),
+                nn.Linear(dim_in, feat_dim)
+            )
+        elif head == 'None':
+            self.head = None
+        else:
+            raise NotImplementedError(
+                'head not supported: {}'.format(head))
+
+    def forward(self, x,need_feature=False):
+        feat_org = self.encoder.features(x)
+        if self.head:
+            feat = F.normalize(self.head(feat_org), dim=1)
+        else:
+            feat = F.normalize(feat_org, dim=1)
+        if(need_feature):
+            return feat,feat_org
+        else:
+            return feat
+
+    def features(self, x):
+        return self.encoder.features(x)

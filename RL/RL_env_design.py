@@ -169,6 +169,7 @@ class RL_env(object):
             self.action_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
 
         elif (self.params.hp_action_space == "ratio_iter"):
+            ## todo: hp_action_space "ratio" and "ionly" "sparse"
             self.mem_design_space = np.arange(params.mem_iter_min, params.mem_iter_max + 1)
             # self.mem_ratio_design_space = [0.0,0.1,0.5,1.0,1.5]
             # self.incoming_ratio_design_space = [0.0, 0.1, 0.5, 1.0, 1.5]

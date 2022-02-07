@@ -1,3 +1,4 @@
+import time
 import torch
 from torch.utils import data
 from utils.buffer.buffer import Buffer
@@ -188,6 +189,7 @@ class SupContrastReplay(ContinualLearner):
         self.train_acc_mem.append(acc_mem)
         self.train_acc_incoming.append(acc_incoming)
 
+
         if (self.close_loop_cl != None):
             self.close_loop_cl.last_train_loss = mem_loss.item()
 
@@ -229,12 +231,16 @@ class SupContrastReplay(ContinualLearner):
                 batch_y = maybe_cuda(batch_y, self.cuda)
                 batch_x, batch_y = self.memory_manager.update_before_training(batch_x, batch_y)
 
+                self.set_memIter()
                 for j in range(self.mem_iters):
+                    #s = time.time()
                     concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
-
+                   # e1 = time.time()
                     scr_loss = self.perform_scr_update(concat_batch_x, concat_batch_y)
                     #losses.update(scr_loss,batch_y.size(0))
                     self.perform_softmax_update(concat_batch_x, concat_batch_y,mem_num)
+                    # e2 = time.time()
+                    # print("aug",e1-s,"scr update",e2-e1)
 
 
                 # update mem
@@ -244,7 +250,7 @@ class SupContrastReplay(ContinualLearner):
                         '==>>> it: {}, avg. loss: {:.6f}, '
                             .format(i, losses.avg(), acc_batch.avg())
                     )
-                    print("Iter", self.mem_iters)
+                    print("Iter", self.mem_iters,concat_batch_y.shape)
 
 
         self.after_train()

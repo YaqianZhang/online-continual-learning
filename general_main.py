@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from experiment.run import multiple_run,multiple_RLtrainig_run
 from utils.utils import boolean_string
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 
 
 def main(args):
@@ -253,12 +256,13 @@ if __name__ == "__main__":
                         choices=["low_acc",  "random", ])
 
     parser.add_argument("--only_task_seen",dest="only_task_seen",default=False,type=boolean_string)
-    parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","dyna","None"],
+    parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","STOP","None"],
                         help='If True, adjust mem iter')
+
     parser.add_argument("--replay_old_only",dest="replay_old_only",default=False,type=boolean_string,)
 
     parser.add_argument("--split_new_old",dest="split_new_old",default=False,type=boolean_string)
-    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=1, type=int,
+    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=20, type=int,
                         help='')
 
     parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
@@ -309,11 +313,13 @@ if __name__ == "__main__":
     parser.add_argument("--test_mem_recycle",default = False, type=boolean_string)
 
     #################################### RL basics ####################################
-    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_actor","RL_ratio_1para","RL_adpRatio","RL_ratio",
-                                                                "RL_memIter","NoRL","DormantRL","RL_ratioMemIter","RL_2ratioMemIter"],#"1dim","2dim",
-                        help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
+    # parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_actor","RL_ratio_1para","RL_adpRatio","RL_ratio",
+    #                                                             "RL_memIter","NoRL","DormantRL","RL_ratioMemIter","RL_2ratioMemIter"],#"1dim","2dim",
+    #                     help='RL_memIter dynamic adjust memIteration; 1dim and 2dim employ MAB to adjust coef of retrieve index')
+    #
 
-
+    parser.add_argument("--RL_type",dest='RL_type',default="NoRL",type=str,choices=[ "RL_MDP","RL_MAB","NoRL","DormantRL",],#"1dim","2dim",
+                        help='')
     ## action
     parser.add_argument('--action_size', dest='action_size', default=11,
                         type=int,
@@ -323,6 +329,7 @@ if __name__ == "__main__":
     parser.add_argument("--std_trainable",default=False)
     parser.add_argument("--action_space_type",dest="action_space_type",default="sparse",type=str,choices=["cont","monly_dense","ionly_dense","ionly","upper","posneu","sparse","medium","dense"])
     parser.add_argument("--hp_action_space",default="ratio_iter",choices=["ratio","ratio_iter","iter","aug_iter"])
+    parser.add_argument("--MAB_reward_len",default="100",type=int)
     ## reward
     parser.add_argument("--reward_type", dest='reward_type', default="test_acc", type=str,
                         choices=["test_loss_v_rlt","test_alpha01_loss_acc","test_loss_old","test_loss_median","test_loss_acc","acc_diff","test_loss_rlt","test_loss","scaled", "real_reward", "incoming_acc", "mem_acc", "test_acc","test_acc_rlt", "test_acc_rg","relative",
@@ -424,11 +431,14 @@ if __name__ == "__main__":
                         type=int,
                         help="")
 
-
+    parser.add_argument("--resnet_size",default="reduced",choices=["normal","reduced"])
     parser.add_argument("--randaug",default=False)
+    parser.add_argument("--randaug_type",default="static",choices=["dynamic","static"])
+    parser.add_argument("--aug_target",default="both",choices=["mem","incoming","both","none"])
     parser.add_argument("--scraug",default=False)
     parser.add_argument("--randaug_N", default=0,type=int)
     parser.add_argument("--randaug_M", default=1,type=int)
+    parser.add_argument("--aug_start",default=0,type=int)
     #################################################
 
     parser.add_argument('--save_prefix', dest='save_prefix', default="",  help='')
@@ -451,5 +461,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
     torch.cuda.set_device(args.GPU_ID)#args.GPU_ID
+
+    if(args.data=="cifar100"):
+        args.num_tasks = 20
+    elif(args.data=="cifar10"):
+        args.num_tasks = 5
+    elif(args.data=="mini_imagenet"):
+        args.num_tasks=10
+    elif(args.data=="clrs25"):
+        args.num_tasks=5
+    elif(args.data=="core50"):
+        args.num_tasks=9
+    else:
+        raise NotImplementedError("not seen dataset",args.data)
 
     main(args)

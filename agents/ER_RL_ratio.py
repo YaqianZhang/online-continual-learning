@@ -76,6 +76,7 @@ class ER_RL_ratio(ExperienceReplay):
                         'running mem acc: {:.3f}'
                             .format(i, losses_mem.avg(), acc_mem.avg())
                     )
+                    print("mem_iter",self.mem_iters)
 
                     print("replay_para", replay_para,"action:",self.RL_replay.RL_agent.greedy,self.RL_replay.action,)
         self.after_train()

@@ -25,24 +25,27 @@ class ER_dyna_iter(ExperienceReplay):
         if(self.params.dyna_type == "random"):
             return np.random.randint(low=self.params.mem_iter_min,high=self.params.mem_iter_max)
         else:
-            self.dyna_train_acc(train_acc_list)
+            return  self.dyna_train_acc(train_acc_list)
     def dyna_train_acc(self,train_acc_list):
-        target_acc = 0.8
+        target_acc_start = 0.80
+        target_acc_end=0.9
         current_iter = len(train_acc_list)
         if(current_iter ==0 or current_iter == None):
             return 5
         last_acc = train_acc_list[-1]
         max_acc = np.max(train_acc_list)
+        mean_acc=np.mean(train_acc_list)
+        acc=mean_acc
         #slope, intercept, r, p, se = linregress(np.arange(0,current_iter), train_acc_list)
 
         #print(r, p, train_acc_list)
-        if(last_acc <0.8):
+        if(last_acc <target_acc_start): ## under fitting condition
             ## increase
             mem_iter =current_iter + 2
             if(mem_iter>self.params.mem_iter_max):
                 mem_iter = self.params.mem_iter_max
             return mem_iter
-        elif( max_acc >0.85):
+        elif( max_acc >target_acc_end): ## overfitting condition
             #print(r,p,train_acc_list)
             return int(current_iter /2 )
         else:
@@ -64,7 +67,6 @@ class ER_dyna_iter(ExperienceReplay):
         acc_batch = AverageMeter()
         acc_mem = AverageMeter()
         replay_para = None
-        train_acc_list=[]
 
         for ep in range(self.epoch):
             for i, batch_data in enumerate(train_loader):
@@ -73,8 +75,9 @@ class ER_dyna_iter(ExperienceReplay):
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
                 batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
-                memiter = self.set_dyna_iter(train_acc_list)
-                self.RL_replay.RL_agent.greedy_action.append(memiter)
+                memiter = self.set_dyna_iter(self.memory_manager.current_performance)
+                self.mem_iter_list.append(memiter)
+                #self.RL_replay.RL_agent.greedy_action.append(memiter)
                 train_acc_list = []
                 train_loss_list=[]
 
@@ -88,6 +91,7 @@ class ER_dyna_iter(ExperienceReplay):
                     if(train_stats != None):
                         train_acc_list.append(train_stats['acc_mem'])
                         train_loss_list.append(train_stats['loss_mem'])
+                self.memory_manager.current_performance=train_acc_list
 
 
 
@@ -104,7 +108,7 @@ class ER_dyna_iter(ExperienceReplay):
                         'running mem acc: {:.3f}'
                             .format(i, losses_mem.avg(), acc_mem.avg())
                     )
-                    print("memiter",memiter,train_acc_list,train_loss_list)
+                    print("memiter",)#memiter,np.max(train_acc_list),train_acc_list[-1],np.mean(train_acc_list))
 
                     #print("replay_para", replay_para,"action:",self.RL_replay.RL_agent.greedy,self.RL_replay.action,)
         self.after_train()

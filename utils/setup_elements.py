@@ -1,5 +1,5 @@
 import torch
-from models.resnet import ResNet18,Reduced_ResNet18,SupConResNet
+from models.resnet import ResNet18,Reduced_ResNet18,SupConResNet,SupConResNet_normal
 from models.pretrained import ResNet18_pretrained
 from torchvision import transforms
 import torch.nn as nn
@@ -54,32 +54,70 @@ def setup_architecture(params):
 
     if params.agent in ['SCR','SCR_META', 'SCP',"SCR_RL_ratio","SCR_RL_iter"]:
         if params.data == 'mini_imagenet':
-            return SupConResNet(640, head=params.head)
+            if(params.resnet_size == "normal"):
+                return SupConResNet_normal(2048, head=params.head)
+            else:
+                return SupConResNet(640, head=params.head)
         if params.data == 'clrs25':
-            return SupConResNet(2560, head=params.head)
+
+            if(params.resnet_size == "normal"):
+                return SupConResNet_normal(8192, head=params.head)
+            else:
+                return SupConResNet(2560, head=params.head)
+
         if params.data == 'core50':
-            return SupConResNet(2560, head=params.head)
+            if(params.resnet_size == "normal"):
+                return SupConResNet_normal(8192, head=params.head)
+            else:
+                return SupConResNet(2560, head=params.head)
 
 
-        return SupConResNet(head=params.head)
+        if(params.resnet_size == "normal"):
+            return SupConResNet_normal(512, head=params.head)
+        else:
+            return SupConResNet( head=params.head)
+
+        #return SupConResNet(head=params.head)
     if params.agent == 'CNDPM':
         from models.ndpm.ndpm import Ndpm
         return Ndpm(params)
     if params.data == 'cifar100':
-        return Reduced_ResNet18(nclass)
+        if(params.resnet_size == "normal"):
+            return ResNet18(nclass)
+        else:
+            return Reduced_ResNet18(nclass)
     elif params.data == 'clrs25':
-        model = Reduced_ResNet18(nclass)
-        model.linear = nn.Linear(2560, nclass, bias=True)
+        if(params.resnet_size == "normal"):
+            model= ResNet18(nclass)
+            model.linear = nn.Linear(8192, nclass, bias=True)
+        else:
+            model= Reduced_ResNet18(nclass)
+            model.linear = nn.Linear(2560, nclass, bias=True)
         return model
     elif params.data == 'cifar10':
-        return Reduced_ResNet18(nclass)
+
+        if(params.resnet_size == "normal"):
+            return ResNet18(nclass)
+        else:
+            return Reduced_ResNet18(nclass)
+
     elif params.data == 'core50':
-        model = Reduced_ResNet18(nclass)
-        model.linear = nn.Linear(2560, nclass, bias=True)
+        if(params.resnet_size == "normal"):
+            model= ResNet18(nclass)
+            model.linear = nn.Linear(8192, nclass, bias=True)
+        else:
+            model= Reduced_ResNet18(nclass)
+            model.linear = nn.Linear(2560, nclass, bias=True)
+
         return model
     elif params.data == 'mini_imagenet':
-        model = Reduced_ResNet18(nclass)
-        model.linear = nn.Linear(640, nclass, bias=True)
+        if(params.resnet_size == "normal"):
+            model= ResNet18(nclass)
+            model.linear = nn.Linear(2048, nclass, bias=True)
+        else:
+            model= Reduced_ResNet18(nclass)
+
+            model.linear = nn.Linear(640, nclass, bias=True)
         return model
     elif params.data == 'openloris':
         return Reduced_ResNet18(nclass)

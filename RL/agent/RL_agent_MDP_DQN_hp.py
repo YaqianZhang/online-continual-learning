@@ -218,7 +218,7 @@ class RL_DQN_agent_hp(RL_memIter_agent):
 
         if(self.params.actor_type == "random"):
             self.epsilon = 1
-
+        #print(self.epsilon)
 
 
 

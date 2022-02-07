@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 from RL.agent.RL_agent_MDP_DQN_hp import RL_DQN_agent_hp
+from RL.agent.RL_agent_MAB import RL_MAB_agent
 from utils.utils import maybe_cuda
 from RL.RL_env_design import RL_env
 class RL_replay(object):
@@ -21,7 +22,10 @@ class RL_replay(object):
         self.RL_env = RL_env(params,RL_replay=self)
         ob_dim = self.RL_env.get_state_dim()
         action_num = self.RL_env.get_action_dim()
-        self.RL_agent = RL_DQN_agent_hp(params,action_num,ob_dim,RL_replay=self)
+        if(self.params.RL_type == "RL_MDP"):
+            self.RL_agent = RL_DQN_agent_hp(params, action_num, ob_dim, RL_replay=self)
+        elif(self.params.RL_type == "RL_MAB"):
+            self.RL_agent = RL_MAB_agent(params,action_num,ob_dim, RL_replay=self)
 
         self.state = None
         self.action = None

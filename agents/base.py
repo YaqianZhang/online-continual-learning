@@ -1,3 +1,4 @@
+import time
 from abc import abstractmethod
 import abc
 import numpy as np
@@ -14,6 +15,9 @@ from utils.utils import cutmix_data
 from utils.buffer.buffer_utils import get_grad_vector
 import copy
 from utils.aug_agent import aug_agent
+
+from sklearn.metrics import confusion_matrix, cohen_kappa_score
+
 
 class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
     '''
@@ -34,7 +38,7 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         self.RL_replay = None
 
         self.memory_manager = memory_manager_class(model, params)
-        self.aug_agent = aug_agent(params)
+        self.aug_agent = aug_agent(params,CL_agent=self)
 
         ## save train acc
         self.mem_iter_list =[]
@@ -199,11 +203,28 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         return softmax_loss
 
     def set_memIter(self):
-
-        if self.task_seen == 0 and self.params.start_mem_iters>-1:
-            self.mem_iters = self.params.start_mem_iters
-        else:
+        #print(self.task_seen,self.params.aug_start)
+        if self.task_seen >= self.params.aug_start:
             self.mem_iters = self.params.mem_iters
+
+            #### todo: mir it is subsample
+
+            self.memory_manager.buffer.retrieve_method.num_retrieve = self.params.eps_mem_batch
+
+        else:
+            self.mem_iters = 1
+            #print(self.params.agent)
+            if(self.params.agent == "SCR"):
+                pass
+
+                #self.memory_manager.buffer.retrieve_method.num_retrieve = self.params.eps_mem_batch
+            else:
+                self.memory_manager.buffer.retrieve_method.num_retrieve = 10
+
+        # if self.task_seen == 0 and self.params.start_mem_iters>-1:
+        #     self.mem_iters = self.params.start_mem_iters
+        # else:
+        #     self.mem_iters = self.params.mem_iters
     def concat_memory_batch(self, batch_x,batch_y):
         mem_x, mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
         if (self.params.close_loop_mem_type == "low_acc" and self.low_acc_classes != None):
@@ -221,16 +242,30 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             batch_y = torch.cat([mem_y,batch_y,])
         # if (self.params.acc_no_aug):
         #     self._compute_acc(batch_x,batch_y,mem_x.size(0))
-        if (self.params.randaug):
+        if(self.task_seen >= self.params.aug_start):
+            if (self.params.randaug):
             # print(concat_batch_x[0])
-            batch_x = self.aug_agent.aug_data(batch_x,mem_x.size(0),)
-        if (self.params.scraug):
-            batch_x = self.aug_agent.scr_aug_data(batch_x)
+
+                # batch_x_aug1 = self.aug_agent.aug_data(batch_x,mem_x.size(0),)
+                # end1=time.time()
+
+                batch_x_aug2 = self.aug_agent.aug_data_old(batch_x, mem_x.size(0), )
+                # end2=time.time()
+                # print(end1-start,end2-end1)
+                batch_x = batch_x_aug2
+
+            if (self.params.scraug):
+                batch_x = self.aug_agent.scr_aug_data(batch_x,mem_x.size(0))
 
         return batch_x,batch_y,mem_x.size(0)
     def _compute_softmax_logits(self,x,need_grad = True):
 
-        logits = self.model.forward(x)
+        if(need_grad):
+
+            logits = self.model.forward(x)
+        else:
+            with torch.no_grad():
+                logits = self.model.forward(x)
         return logits
 
     def compute_acc(self,logits,batch_y):
@@ -321,7 +356,8 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         self.model.eval()
         acc_array = np.zeros(len(test_loaders))
         loss_array = np.zeros(len(test_loaders))
-        if self.params.use_softmaxloss== False and (self.params.trick['nmc_trick'] or self.params.agent in ['ICARL','SCR','SCP']):
+        kappa_array=np.zeros(len(test_loaders))
+        if self.params.trick['nmc_trick'] or self.params.agent in ['ICARL','SCP']:
 
             exemplar_means =self.compute_nmc_mean()
 
@@ -340,13 +376,13 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             for task, test_loader in enumerate(test_loaders):
                 acc = AverageMeter()
                 loss = AverageMeter()
+                kappa_score = AverageMeter()
                 for i, (batch_x, batch_y) in enumerate(test_loader):
                     batch_x = maybe_cuda(batch_x, self.cuda)
                     batch_y = maybe_cuda(batch_y, self.cuda)
-                    if self.params.use_softmaxloss== False and (self.params.trick['nmc_trick'] or self.params.agent in ['ICARL', 'SCR', 'SCP']):
+                    if self.params.trick['nmc_trick'] or self.params.agent in ['ICARL', 'SCP']:
 
                         correct_cnt,pred_label,loss_batch = self.nmc_predict(batch_x,batch_y,exemplar_means)
-
                         # feature = self.model.features(batch_x)  # (batch_size, feature_size)
                         # for j in range(feature.size(0)):  # Normalize
                         #     feature.data[j] = feature.data[j] / feature.data[j].norm()
@@ -376,12 +412,12 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                         if(self.params.agent[:3] == "SCR" and self.params.use_softmaxloss):
                             features = self.model.features(batch_x)
                             logits = self.softmax_head(features)
-                            correct_cnt,pred = self.compute_acc(logits,batch_y)
+                            correct_cnt,pred_label = self.compute_acc(logits,batch_y)
                             loss_batch = torch.nn.CrossEntropyLoss()(logits, batch_y)
                         else:
 
                             logits = self.model.forward(batch_x)
-                            correct_cnt,pred = self.compute_acc(logits,batch_y)
+                            correct_cnt,pred_label = self.compute_acc(logits,batch_y)
                             loss_batch = self.criterion(logits, batch_y)
 
 
@@ -420,13 +456,19 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
                             new_class_score.update(logits[:, self.new_labels_zombie].mean().item(), batch_y.size(0))
                         else:
                             pass
+                    #print(pred_label,batch_y)
+                    kappa = cohen_kappa_score(pred_label.cpu().numpy(), batch_y.cpu().numpy())
+                    kappa_score.update(kappa,batch_y.size(0))
                     acc.update(correct_cnt, batch_y.size(0))
                     loss.update(loss_batch,batch_y.size(0))
                 acc_array[task] = acc.avg()
                 loss_array[task] = loss.avg()
+                kappa_array[task] = kappa_score.avg()
         print(acc_array)
+        #print(kappa_array)
 
-        print(loss_array)
+        #print(loss_array)
+
        # print(task, self.task_seen, "acc", np.mean(acc_array[:self.task_seen]), np.mean(loss_array[:self.task_seen]))
         if self.params.error_analysis:
             self.error_list.append((no, nn, oo, on))
@@ -446,13 +488,13 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
             print(self.bias_norm_new)
         return acc_array,loss_array
 
-    def save_mem_iters(self,prefix):
-        arr = np.array(self.mem_iter_list)
-        np.save(prefix + "mem_iter_list", arr)
-        arr = np.array(self.incoming_ratio_list)
-        np.save(prefix + "incoming_ratio_list", arr)
-        arr = np.array(self.mem_ratio_list)
-        np.save(prefix + "mem_ratio_list", arr)
+    # def save_mem_iters(self,prefix):
+    #     arr = np.array(self.mem_iter_list)
+    #     np.save(prefix + "mem_iter_list", arr)
+    #     arr = np.array(self.incoming_ratio_list)
+    #     np.save(prefix + "incoming_ratio_list", arr)
+    #     arr = np.array(self.mem_ratio_list)
+    #     np.save(prefix + "mem_ratio_list", arr)
 
     def save_training_acc(self,prefix):
         arr = np.array(self.train_acc_incoming)
@@ -460,6 +502,10 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
 
         arr = np.array(self.train_acc_mem)
         np.save(prefix + "train_acc_mem.npy", arr)
+        arr = np.array(self.mem_iter_list)
+        np.save(prefix + "mem_iter.npy", arr)
+
+        arr = np.array(self.mem_iter_list)
 
         arr = np.array(self.train_acc_incoming_org)
         np.save(prefix + "train_acc_incoming_org.npy", arr)

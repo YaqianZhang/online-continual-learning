@@ -27,7 +27,7 @@ from agents.scr import SupContrastReplay
 from agents.scr_ratio import SCR_RL_ratio
 from agents.scr_rl_addIter import SCR_RL_iter
 from agents.ER_RL_ratio import ER_RL_ratio
-from agents.ER_RL_iter import ER_RL_iter
+#from agents.ER_RL_iter import ER_RL_iter
 from agents.ER_RL_addIter import ER_RL_addIter
 from agents.ER_dyna_iter import ER_dyna_iter
 from utils.buffer.sc_retrieve import Match_retrieve
@@ -47,7 +47,7 @@ agents = {
     'ER': ExperienceReplay,
     "ER_offline":ExperienceReplay_offline,
     "ER_RL_ratio":ER_RL_ratio,
-"ER_RL_iter":ER_RL_iter,
+#"ER_RL_iter":ER_RL_iter,
 "ER_RL_addIter":ER_RL_addIter,
     "ER_dyna_iter":ER_dyna_iter,
     #'RLER': RL_ExperienceReplay,

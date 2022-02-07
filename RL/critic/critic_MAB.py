@@ -5,7 +5,7 @@ import torch
 from utils.utils import maybe_cuda
 from unused.lstm import LSTM_critic
 
-class critic_class(object):
+class critic_class_MAB(object):
     def __init__(self,params,action_num,ob_dim,training_steps,RL_agent):
         self.RL_agent = RL_agent
         self.total_training_steps = training_steps
@@ -103,13 +103,9 @@ class critic_class(object):
 
     def load_critic_model(self, model):
         print("!!! load pre-trained model")
-        prefix="SCR_RL_iter1_ran_ran_tbuf_temp0.07_softmax10241_30iter_300_test_loss_rlt_0.001_train_test4_exp_critic32_3_qmlp_erb50_targetq250memBch100_nc_20_2000_cifar100_RLmodel"
-            #"ER_RL_addIter1_ran_ran_scraug_tbuf_tm100_30iter_300_test_loss_rlt_0.001_ionly_dense_train_test4_exp_critic32_3_qmlp_erb50_targetq250memBch100_nc_10_2000_mini_imagenet_RLmodel"
-
-
-            # "RLER1_MIR_ran_mIter3_splitno_testBch100_RL2rmemIter_33_test_loss_0.0_new_old6mn_org_qstart100" \
-            #    "_erb50_exp_nxtBtch_0.50.1_recent2_wd-6_test_bug_nc_20_10000_cifar100_RLmodel"
-        PATH = "results/1259051/"+prefix
+        prefix="RLER1_MIR_ran_mIter3_splitno_testBch100_RL2rmemIter_33_test_loss_0.0_new_old6mn_org_qstart100" \
+               "_erb50_exp_nxtBtch_0.50.1_recent2_wd-6_test_bug_nc_20_10000_cifar100_RLmodel"
+        PATH = "results/59054/"+prefix
         #PATH= "results/59054/RLER1_MIR_ran_mIter3_testBch100_RL2rmemIter_33_test_loss_0.0_new_old6mn_nxtBtch_recent2_misc4_nc_20_10000_cifar100_RLmodel"
         #PATH = "results/19036/ER_ran_ran_testBch100_RL_2ratioMemIter_multi-step_7_dim_random_numRuns50_20_5000_cifar100_RLmodel"
         # "results/19037/ER_ran_ran_testBch100_RL_2ratioMemIter_multi-step_7_dim_random_critic32_2_" \
@@ -150,70 +146,5 @@ class critic_class(object):
         # for layer in network.children():
         #     if hasattr(layer, 'reset_parameters'):
         #         layer.reset_parameters()
-
-    def update_q_target(self):
-
-        for target_param, param in zip(
-                self.q_function_target.parameters(), self.q_function.parameters()
-        ):
-            target_param.data.copy_(param.data)
-
-
-    def train_batch(self,state_batch,action_batch,reward_batch,next_state_batch,done_batch,training_steps):
-
-        if self.params.episode_type == "multi-step":
-
-            with torch.no_grad():
-                #q_s = self.q_function_target(next_state_batch)
-                q_s_target = self.compute_q(next_state_batch,self.q_function_target)
-                q_s = self.compute_q(next_state_batch,self.q_function)
-
-                if(self.params.double_DQN):
-
-                    max_a = torch.max(q_s_target,axis=1)[1]
-                    max_a_na=torch.nn.functional.one_hot(max_a,num_classes = q_s.shape[1])
-                    td_target = reward_batch + self.gamma * torch.sum(q_s * max_a_na, axis=1) * (1 - done_batch)
-
-                else:
-
-
-                    td_target = reward_batch + self.gamma * torch.max(q_s, axis=1)[0] * (1 - done_batch)
-        else:
-            td_target = reward_batch
-
-        td_target = td_target.float()
-        #print("train batch",)
-
-
-        n = state_batch.shape[0]
-        #print(self.RL_agent.ER_batchsize, n)
-
-
-        q_values = self.compute_q(state_batch,self.q_function)
-
-
-        predict_q = q_values[torch.arange(n), action_batch].float()
-
-        td_target = maybe_cuda(td_target)
-
-        assert predict_q.shape == td_target.shape
-
-        rl_loss = torch.nn.functional.mse_loss(predict_q, td_target, reduction="mean")
-
-        # rl_loss = torch.nn.SmoothL1Loss()(predict_q, td_target )
-
-        # rl_opt = torch.optim.Adam(self.get_parameters(),
-        #                           lr=self.rl_lr.value(training_steps),
-        #                           weight_decay=self.rl_wd)
-
-        self.rl_opt.zero_grad()
-        rl_loss.backward()
-        torch.nn.utils.clip_grad_value_(self.get_parameters(), self.grad_norm_clipping)
-        if(self.params.RL_agent_update_flag):
-            self.rl_opt.step()
-        #print("train RL, loss", rl_loss.item())
-        return rl_loss
-
-
 
 
