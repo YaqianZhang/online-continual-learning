@@ -3,8 +3,8 @@ from torch.utils import data
 from agents.base import ContinualLearner
 from continuum.data_utils import dataset_transform
 from utils.utils import maybe_cuda, AverageMeter
-from RL.RL_replay_base import RL_replay
-from RL.close_loop_cl import close_loop_cl
+# from RL.RL_replay_base import RL_replay
+# from RL.close_loop_cl import close_loop_cl
 from torchvision.transforms import transforms
 
 import numpy as np
@@ -25,23 +25,22 @@ class ExperienceReplay(ContinualLearner):
         self.softmax_opt =  torch.optim.SGD(self.model.linear.parameters(),
                                 lr=0.1,
                                 )
-        #if(self.params.online_hyper_RL):
 
 
 
-        if(self.params.use_test_buffer):
-            self.close_loop_cl = close_loop_cl(self,model,self.memory_manager)
-            self.mix_label_pair = None
-            self.low_acc_classes = None
-            self.col=None
-            self.row=None
-            self.RL_replay = RL_replay(params, self.close_loop_cl)
-        else:
-            self.close_loop_cl = None
-        self.replay_para={"mem_ratio":self.params.mem_ratio,
-                          "incoming_ratio":self.params.incoming_ratio,
-                          "mem_iter":self.params.mem_iters,
-                          "randaug_M":self.params.randaug_M}
+        # if(self.params.use_test_buffer):
+        #     self.close_loop_cl = close_loop_cl(self,model,self.memory_manager)
+        #     self.mix_label_pair = None
+        #     self.low_acc_classes = None
+        #     self.col=None
+        #     self.row=None
+        #     self.RL_replay = RL_replay(params, self.close_loop_cl)
+        # else:
+        #     self.close_loop_cl = None
+        # self.replay_para={"mem_ratio":self.params.mem_ratio,
+        #                   "incoming_ratio":self.params.incoming_ratio,
+        #                   "mem_iter":self.params.mem_iters,
+        #                   "randaug_M":self.params.randaug_M}
 
 
         # _CIFAR_MEAN, _CIFAR_STD = (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
@@ -112,85 +111,85 @@ class ExperienceReplay(ContinualLearner):
     def _batch_update(self,batch_x,batch_y,losses_batch,acc_batch,i,replay_para=None,mem_num=0):
 
         STOP_FLAG = False
-        if(replay_para == None):
-            replay_para = self.replay_para
+        # if(replay_para == None):
+        #     replay_para = self.replay_para
 
 
         # if(self.params.test_mem_recycle):
         #     recycle_test_x = recycle.store_tmp(img,cls_max)
-        ## todo : cutmix
-        do_cutmix = self.params.do_cutmix and np.random.rand(1) < self.params.cutmix_prob
-        if do_cutmix:
-            # print(x.shape)
-            ce = torch.nn.CrossEntropyLoss(reduction='mean')
+        # ## todo : cutmix
+        # do_cutmix = self.params.do_cutmix and np.random.rand(1) < self.params.cutmix_prob
+        # if do_cutmix:
+        #     # print(x.shape)
+        #     ce = torch.nn.CrossEntropyLoss(reduction='mean')
+        #
+        #     x, labels_a, labels_b, lam = cutmix_data(x=batch_x, y=batch_y, alpha=1.0,index="None")
+        #     #logits = self._compute_softmax_logits(x)
+        #     logits = self.model.forward(x)
+        #
+        #     loss = lam * ce(logits, labels_a) + (1 - lam) * ce(
+        #         logits, labels_b
+        #     )
+        #     avrg_acc = 0
+        #     train_stats = None
+        #
+        #
+        # else:
 
-            x, labels_a, labels_b, lam = cutmix_data(x=batch_x, y=batch_y, alpha=1.0,index="None")
-            #logits = self._compute_softmax_logits(x)
-            logits = self.model.forward(x)
-
-            loss = lam * ce(logits, labels_a) + (1 - lam) * ce(
-                logits, labels_b
-            )
-            avrg_acc = 0
-            train_stats = None
 
 
+
+
+        logits = self.model.forward(batch_x)
+        _, pred_label = torch.max(logits, 1)
+        acc = (pred_label == batch_y)
+
+        ce_all = torch.nn.CrossEntropyLoss(reduction='none')
+        softmax_loss_full = ce_all(logits, batch_y)
+
+        total_num = batch_x.shape[0]
+        avrg_acc = acc.sum().item() / total_num
+        #loss = torch.mean(softmax_loss_full)
+
+
+
+
+
+
+        acc_incoming = acc[mem_num:].sum().item() / (total_num - mem_num)
+
+        incoming_loss = torch.mean(softmax_loss_full[mem_num:])
+        self.train_loss_incoming.append(incoming_loss.item())
+        self.train_acc_incoming.append(acc_incoming)
+
+        if(mem_num>0):
+
+            acc_mem = acc[:mem_num].sum().item() / mem_num
+            mem_loss = torch.mean(softmax_loss_full[:mem_num])
+            self.train_acc_mem.append(acc_mem)
+            self.train_loss_mem.append(mem_loss.item())
+            # if(self.close_loop_cl != None):
+            #
+            #     self.close_loop_cl.last_train_loss = mem_loss.item()
+
+
+            #loss = replay_para['mem_ratio'] * mem_loss+ \
+                   #replay_para['incoming_ratio'] * incoming_loss
+            loss = torch.mean(softmax_loss_full)
+            train_stats = {'acc_incoming': acc_incoming,
+                           'acc_mem': acc_mem,
+                           "loss_incoming": incoming_loss.item(),
+                           "loss_mem": mem_loss.item(),
+                           "batch_num": i,
+                           }
+            if(mem_loss> incoming_loss*3):
+                STOP_FLAG = True
         else:
-
-
-
-
-
-            logits = self.model.forward(batch_x)
-            _, pred_label = torch.max(logits, 1)
-            acc = (pred_label == batch_y)
-
-            ce_all = torch.nn.CrossEntropyLoss(reduction='none')
-            softmax_loss_full = ce_all(logits, batch_y)
-
-            total_num = batch_x.shape[0]
-            avrg_acc = acc.sum().item() / total_num
-            #loss = torch.mean(softmax_loss_full)
-
-
-
-
-
-
-            acc_incoming = acc[mem_num:].sum().item() / (total_num - mem_num)
-
-            incoming_loss = torch.mean(softmax_loss_full[mem_num:])
-            self.train_loss_incoming.append(incoming_loss.item())
-            self.train_acc_incoming.append(acc_incoming)
-
-            if(mem_num>0):
-
-                acc_mem = acc[:mem_num].sum().item() / mem_num
-                mem_loss = torch.mean(softmax_loss_full[:mem_num])
-                self.train_acc_mem.append(acc_mem)
-                self.train_loss_mem.append(mem_loss.item())
-                if(self.close_loop_cl != None):
-
-                    self.close_loop_cl.last_train_loss = mem_loss.item()
-
-
-                #loss = replay_para['mem_ratio'] * mem_loss+ \
-                       #replay_para['incoming_ratio'] * incoming_loss
-                loss = torch.mean(softmax_loss_full)
-                train_stats = {'acc_incoming': acc_incoming,
-                               'acc_mem': acc_mem,
-                               "loss_incoming": incoming_loss.item(),
-                               "loss_mem": mem_loss.item(),
-                               "batch_num": i,
-                               }
-                if(mem_loss> incoming_loss*3):
-                    STOP_FLAG = True
-            else:
-                loss = torch.mean(softmax_loss_full)
-                #loss = replay_para['incoming_ratio'] * incoming_loss
-                acc_mem = None
-                mem_loss = None
-                train_stats=None
+            loss = torch.mean(softmax_loss_full)
+            #loss = replay_para['incoming_ratio'] * incoming_loss
+            acc_mem = None
+            mem_loss = None
+            train_stats=None
 
 
         acc_batch.update(avrg_acc, batch_y.size(0))
@@ -206,25 +205,6 @@ class ExperienceReplay(ContinualLearner):
 
         return  train_stats, STOP_FLAG
 
-    # def tensor_to_image(self,tensor):
-    #     tensor = tensor * 255
-    #     tensor = np.array(tensor, dtype=np.uint8)
-    #     if np.ndim(tensor) > 3:
-    #         assert tensor.shape[0] == 1
-    #         tensor = tensor[0]
-    #     return PIL.Image.fromarray(tensor)
-
-    # def aug_data(self,concat_batch_x):
-    #     n, c, w, h = concat_batch_x.shape
-    #
-    #     images = [transforms.ToPILImage()(concat_batch_x[i]) for i in range(n)]
-    #
-    #     concat_batch_x = [self.transform_train(image).reshape([1, c, w, h]) for image in images]
-    #
-    #     concat_batch_x = maybe_cuda(torch.cat(concat_batch_x, dim=0))
-    #     return concat_batch_x
-    # def scr_aug_data(self,combined_batch):
-    #     return self.scr_transform(combined_batch)
 
 
     def train_learner(self, x_train, y_train):
@@ -251,7 +231,7 @@ class ExperienceReplay(ContinualLearner):
                 batch_x,batch_y = batch_data
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
-                batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
+                #batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
                 self.set_memIter()
                 memiter=self.mem_iters
 
@@ -272,8 +252,8 @@ class ExperienceReplay(ContinualLearner):
                         break
 
                 self.mem_iter_list.append(memiter)
-                if(self.params.use_test_buffer):
-                    self.close_loop_cl.compute_testmem_loss()
+                # if(self.params.use_test_buffer):
+                #     self.close_loop_cl.compute_testmem_loss()
                 self.memory_manager.update_memory(batch_x, batch_y)
 
                 if i % 100 == 1 and self.verbose:
@@ -289,83 +269,5 @@ class ExperienceReplay(ContinualLearner):
                     # )
                     print("mem_iter", memiter,concat_batch_y.shape)
         self.after_train()
-
-
-        ################# joint_replay_type
-
-        # if (self.params.joint_replay_type == "together"):
-        #     self._batch_update(batch_x, batch_y, losses_batch, acc_batch, i)
-        # elif (self.params.joint_replay_type == "seperate"):
-        #     self._batch_update_org(batch_x, batch_y, acc_batch, losses_batch, losses_mem, acc_mem)
-        # else:
-        #     raise NotImplementedError("undefined joint training implementation type",
-        #                               self.params.joint_replay_type)
-
-    # def _batch_update_org(self,batch_x,batch_y,acc_batch,losses_batch,losses_mem,acc_mem):
-    #
-    #
-    #     for j in range(self.mem_iters):
-    #         logits = self.model.forward(batch_x)
-    #         loss = self.criterion(logits, batch_y)
-    #         if self.params.trick['kd_trick']:
-    #             loss = 1 / (self.task_seen + 1) * loss + (1 - 1 / (self.task_seen + 1)) * \
-    #                        self.kd_manager.get_kd_loss(logits, batch_x)
-    #         if self.params.trick['kd_trick_star']:
-    #             loss = 1/((self.task_seen + 1) ** 0.5) * loss + \
-    #                    (1 - 1/((self.task_seen + 1) ** 0.5)) * self.kd_manager.get_kd_loss(logits, batch_x)
-    #         _, pred_label = torch.max(logits, 1)
-    #         correct_cnt = (pred_label == batch_y).sum().item() / batch_y.size(0)
-    #         # update tracker
-    #         acc_batch.update(correct_cnt, batch_y.size(0))
-    #         losses_batch.update(loss, batch_y.size(0))
-    #         # backward
-    #         self.opt.zero_grad()
-    #         loss.backward()
-    #
-    #
-    #         # self.opt.step()
-    #         # if (self.params.frozen_old_fc):
-    #         #     self.model.linear.weight.data[self.old_labels, :] = weight_org[self.old_labels, :]
-    #         #
-    #
-    #
-    #         # mem update
-    #         mem_x, mem_y = self.buffer.retrieve(x=batch_x, y=batch_y)
-    #         if mem_x.size(0) > 0:
-    #             mem_x = maybe_cuda(mem_x, self.cuda)
-    #             mem_y = maybe_cuda(mem_y, self.cuda)
-    #             mem_logits = self.model.forward(mem_x)
-    #
-    #             loss_mem = self.criterion(mem_logits, mem_y)
-    #             if self.params.trick['kd_trick']:
-    #                 loss_mem = 1 / (self.task_seen + 1) * loss_mem + (1 - 1 / (self.task_seen + 1)) * \
-    #                            self.kd_manager.get_kd_loss(mem_logits, mem_x)
-    #             if self.params.trick['kd_trick_star']:
-    #                 loss_mem = 1 / ((self.task_seen + 1) ** 0.5) * loss_mem + \
-    #                        (1 - 1 / ((self.task_seen + 1) ** 0.5)) * self.kd_manager.get_kd_loss(mem_logits,
-    #                                                                                              mem_x)
-    #             # update tracker
-    #             losses_mem.update(loss_mem, mem_y.size(0))
-    #             _, pred_label = torch.max(mem_logits, 1)
-    #             correct_cnt = (pred_label == mem_y).sum().item() / mem_y.size(0)
-    #             acc_mem.update(correct_cnt, mem_y.size(0))
-    #
-    #             #self.opt.zero_grad()
-    #
-    #             loss_mem.backward()
-    #
-    #         if self.params.update == 'ASER' or self.params.retrieve == 'ASER':
-    #             # opt update
-    #             self.opt.zero_grad()
-    #             combined_batch = torch.cat((mem_x, batch_x))
-    #             combined_labels = torch.cat((mem_y, batch_y))
-    #             combined_logits = self.model.forward(combined_batch)
-    #             loss_combined = self.criterion(combined_logits, combined_labels)
-    #             loss_combined.backward()
-    #             self.opt.step()
-    #         else:
-    #
-    #             self.opt.step()
-
 
 

@@ -92,13 +92,13 @@ class Reservoir_update(object):
         # buffer.buffer_img[list(idx_map.keys())] = x[list(idx_map.values())]
         # buffer.buffer_label[list(idx_map.keys())] = y[list(idx_map.values())]
 
-        if (buffer.params.use_tmp_buffer):
+        # if (buffer.params.use_tmp_buffer):
+        #
+        #     tmp_buffer.tmp_store(x[idx_new_data], y[idx_new_data])
+        #
+        # else:
 
-            tmp_buffer.tmp_store(x[idx_new_data], y[idx_new_data])
-
-        else:
-
-            buffer.overwrite(idx_map, x, y)
+        buffer.overwrite(idx_map, x, y)
 
         return list(idx_map.keys())
 

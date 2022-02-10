@@ -190,8 +190,8 @@ class SupContrastReplay(ContinualLearner):
         self.train_acc_incoming.append(acc_incoming)
 
 
-        if (self.close_loop_cl != None):
-            self.close_loop_cl.last_train_loss = mem_loss.item()
+        # if (self.close_loop_cl != None):
+        #     self.close_loop_cl.last_train_loss = mem_loss.item()
 
         softmax_loss = (replay_para['mem_ratio']*torch.sum(softmax_loss_full[:mem_num]) +\
                 replay_para['incoming_ratio'] * torch.sum(softmax_loss_full[mem_num:]))/total_num

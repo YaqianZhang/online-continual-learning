@@ -187,20 +187,20 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
     def forward_with_weight(self, x,weight):
         return self.model.forward_with_weight(x,weight)
 
-    def perform_cutmix(self, x, y):
-        ce = torch.nn.CrossEntropyLoss(reduction='mean')
-
-        do_cutmix = self.params.do_cutmix and np.random.rand(1) < 0.5
-        if do_cutmix:
-            # print(x.shape)
-
-            x, labels_a, labels_b, lam = cutmix_data(x=x, y=y, alpha=1.0, index=index)
-
-            logits = self.model.forward(x)
-            softmax_loss = lam * ce(logits, labels_a) + (1 - lam) * ce(
-                logits, labels_b
-            )
-        return softmax_loss
+    # def perform_cutmix(self, x, y):
+    #     ce = torch.nn.CrossEntropyLoss(reduction='mean')
+    #
+    #     do_cutmix = self.params.do_cutmix and np.random.rand(1) < 0.5
+    #     if do_cutmix:
+    #         # print(x.shape)
+    #
+    #         x, labels_a, labels_b, lam = cutmix_data(x=x, y=y, alpha=1.0, index=index)
+    #
+    #         logits = self.model.forward(x)
+    #         softmax_loss = lam * ce(logits, labels_a) + (1 - lam) * ce(
+    #             logits, labels_b
+    #         )
+    #     return softmax_loss
 
     def set_memIter(self):
         #print(self.task_seen,self.params.aug_start)
@@ -227,11 +227,11 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         #     self.mem_iters = self.params.mem_iters
     def concat_memory_batch(self, batch_x,batch_y):
         mem_x, mem_y = self.memory_manager.retrieve_from_mem(batch_x, batch_y, self.task_seen)
-        if (self.params.close_loop_mem_type == "low_acc" and self.low_acc_classes != None):
-            add_mem_x, add_mem_y = self.memory_manager.buffer.retrieve_class_num(self.low_acc_classes, self.eps_mem_batch)
-            mem_x = torch.cat([mem_x, add_mem_x, ])
-            mem_y = torch.cat([mem_y, add_mem_y, ])
-
+        # if (self.params.close_loop_mem_type == "low_acc" and self.low_acc_classes != None):
+        #     add_mem_x, add_mem_y = self.memory_manager.buffer.retrieve_class_num(self.low_acc_classes, self.eps_mem_batch)
+        #     mem_x = torch.cat([mem_x, add_mem_x, ])
+        #     mem_y = torch.cat([mem_y, add_mem_y, ])
+        #
 
 
         if mem_x.size(0) > 0:
@@ -552,13 +552,13 @@ class ContinualLearner(torch.nn.Module, metaclass=abc.ABCMeta):
         #
         #     arr = np.array(self.RL_trainer.return_list)
         #     np.save(prefix + "return_list.npy", arr)
-        if(self.params.temperature_scaling):
-            arr = np.array(self.scaled_model.pre_logits_list)
-            np.save(prefix + "pre_celoss.npy",arr)
-            arr = np.array(self.scaled_model.aft_logits_list)
-            np.save(prefix + "aft_celoss.npy",arr)
-            arr = np.array(self.scaled_model.opt_temp_list)
-            np.save(prefix + "opt_temp.npy",arr)
+        # if(self.params.temperature_scaling):
+        #     arr = np.array(self.scaled_model.pre_logits_list)
+        #     np.save(prefix + "pre_celoss.npy",arr)
+        #     arr = np.array(self.scaled_model.aft_logits_list)
+        #     np.save(prefix + "aft_celoss.npy",arr)
+        #     arr = np.array(self.scaled_model.opt_temp_list)
+        #     np.save(prefix + "opt_temp.npy",arr)
 
 
 

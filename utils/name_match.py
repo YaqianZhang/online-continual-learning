@@ -13,7 +13,7 @@ from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
 from agents.lwf import Lwf
 from agents.icarl import Icarl
-from agents.lamaml import LAMAML
+#from agents.lamaml import LAMAML
 from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
 
@@ -24,11 +24,11 @@ from utils.buffer.aser_retrieve import ASER_retrieve
 from utils.buffer.aser_update import ASER_update
 
 from agents.scr import SupContrastReplay
-from agents.scr_ratio import SCR_RL_ratio
-from agents.scr_rl_addIter import SCR_RL_iter
-from agents.ER_RL_ratio import ER_RL_ratio
+# from agents.scr_ratio import SCR_RL_ratio
+# from agents.scr_rl_addIter import SCR_RL_iter
+#from agents.ER_RL_ratio import ER_RL_ratio
 #from agents.ER_RL_iter import ER_RL_iter
-from agents.ER_RL_addIter import ER_RL_addIter
+#from agents.ER_RL_addIter import ER_RL_addIter
 from agents.ER_dyna_iter import ER_dyna_iter
 from utils.buffer.sc_retrieve import Match_retrieve
 from utils.buffer.mem_match import MemMatch_retrieve
@@ -46,12 +46,12 @@ data_objects = {
 agents = {
     'ER': ExperienceReplay,
     "ER_offline":ExperienceReplay_offline,
-    "ER_RL_ratio":ER_RL_ratio,
+  #  "ER_RL_ratio":ER_RL_ratio,
 #"ER_RL_iter":ER_RL_iter,
-"ER_RL_addIter":ER_RL_addIter,
+#"ER_RL_addIter":ER_RL_addIter,
     "ER_dyna_iter":ER_dyna_iter,
     #'RLER': RL_ExperienceReplay,
-    'LAMAML': LAMAML,
+    #'LAMAML': LAMAML,
     'EWC': EWC_pp,
     'AGEM': AGEM,
     'CNDPM': Cndpm,
@@ -59,8 +59,8 @@ agents = {
     'ICARL': Icarl,
     'GDUMB': Gdumb,
     'SCR': SupContrastReplay,
-    'SCR_RL_ratio':SCR_RL_ratio,
-'SCR_RL_iter':SCR_RL_iter,
+#     'SCR_RL_ratio':SCR_RL_ratio,
+# 'SCR_RL_iter':SCR_RL_iter,
     #'SCR_META':SupContrastReplay_meta,
 }
 

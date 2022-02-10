@@ -43,12 +43,12 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
 
     # if(params.batch != 9):
     #     trick += str(params.batch)+"_"
-    # if (params.use_test_buffer):
-    #     if(params.agent == "RLER"):
-    #         pass
-    #     else:
-    #         agent.close_loop_cl.save_task_reward(prefix)
-    #         print("save task!!!!!!!!!!!!!!")
+    if (params.use_test_buffer):
+        if(params.agent == "RLER"):
+            pass
+        else:
+            agent.close_loop_cl.save_task_reward(prefix)
+            print("save task!!!!!!!!!!!!!!")
     agent.save_training_acc(prefix)  # training_accuracy
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
@@ -130,16 +130,16 @@ def multiple_run(params,store=False,save_path=False):
 
         save_task_info(params,data_continuum,run)
 
-        # if(params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
-        #     agent.evaluator = evaluator(test_loaders)
-        # else:
-        #     agent.evaluator = None
+        if(params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
+            agent.evaluator = evaluator(test_loaders)
+        else:
+            agent.evaluator = None
 
 
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            # if( i>4):
-            #     break  ## debug
+            if(params.debug_mode and i>2):
+                break  ## debug
             #
 
             print("-----------run {} training task {}-------------".format(run, i))
@@ -152,28 +152,27 @@ def multiple_run(params,store=False,save_path=False):
             tmp_acc.append(acc_array)
 
             # if (params.RL_type != "NoRL"):
-            # if (params.use_test_buffer):
-            #
-            #     if (params.agent == "RLER"):
-            #         pass
-            #     else:
-            #         print("update",agent.close_loop_cl.task_tacc)
-            #
-            #         agent.close_loop_cl.update_task_reward()
+            if (params.use_test_buffer):
+
+                if (params.agent == "RLER"):
+                    pass
+                else:
+                    print("update",agent.close_loop_cl.task_tacc)
+
+                    agent.close_loop_cl.update_task_reward()
 
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
-    accuracy_list = np.array(accuracy_list)  # 1*task num*2*task_num
-    print(accuracy_list.shape)
+    accuracy_list = np.array(accuracy_list)
     end = time.time()
     running_time = end-start
 
     save_stats(params, agent, model,accuracy_list,running_time)
 
-    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list[:,:,0,:])
+    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
     end = time.time()
 
     print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
@@ -219,11 +218,11 @@ def multiple_RLtrainig_run(params):
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
         save_task_info(params,data_continuum,0)
 
-        # if (params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
-        #
-        #     agent.evaluator = evaluator(test_loaders)
-        # else:
-        #     agent.evaluator = None
+        if (params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
+
+            agent.evaluator = evaluator(test_loaders)
+        else:
+            agent.evaluator = None
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
             if(params.debug_mode and i>2):
@@ -238,9 +237,9 @@ def multiple_RLtrainig_run(params):
             tmp_acc.append(acc_array)
             tmp_loss.append(loss_array)
             # if (params.RL_type != "NoRL"):
-            # if(params.use_test_buffer):
-            #
-            #     agent.close_loop_cl.update_task_reward()
+            if(params.use_test_buffer):
+
+                agent.close_loop_cl.update_task_reward()
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),

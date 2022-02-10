@@ -7,11 +7,11 @@ import random
 
 
 def random_retrieve(buffer, num_retrieve, excl_indices=None, return_indices=False):
-    if (buffer.params.replay_old_only):
-        excl_indices = np.arange(buffer.buffer_size)[buffer.buffer_new_old == 1]
-        #print("excl_dix", excl_indices)
-    else:
-        excl_indices = None
+    # if (buffer.params.replay_old_only):
+    #     excl_indices = np.arange(buffer.buffer_size)[buffer.buffer_new_old == 1]
+    #     #print("excl_dix", excl_indices)
+    # else:
+    #     excl_indices = None
 
     filled_indices = np.arange(buffer.current_index)
     if excl_indices is not None:
