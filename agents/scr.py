@@ -8,7 +8,7 @@ from utils.setup_elements import transforms_match, input_size_match
 from utils.utils import maybe_cuda, AverageMeter
 from kornia.augmentation import RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomGrayscale
 import torch.nn as nn
-from RL.pytorch_util import  build_mlp
+# from RL.pytorch_util import  build_mlp
 import numpy as np
 from utils.utils import cutmix_data
 from torchvision.transforms import transforms
@@ -50,8 +50,8 @@ class SupContrastReplay(ContinualLearner):
             raise NotImplementedError("undefined dataset",params.data)
         print(softmax_inputdim)
 
-        if(params.softmax_type == "seperate"):
-            self.init_seperate_softmax(softmax_inputdim)
+        # if(params.softmax_type == "seperate"):
+        #     self.init_seperate_softmax(softmax_inputdim)
         # elif(params.softmax_type == "meta"):
         #     self.meta_softmax(softmax_inputdim)
 
@@ -67,15 +67,15 @@ class SupContrastReplay(ContinualLearner):
                             "randaug_M": self.params.randaug_M}
 
 
-    def init_seperate_softmax(self,softmax_inputdim):
-        self.softmax_head = maybe_cuda(build_mlp(input_size=softmax_inputdim,
-            output_size=100,
-            n_layers=self.params.softmax_nlayers,
-            size=self.params.softmax_nsize,
-            use_dropout=self.params.softmax_dropout,))
-        self.softmax_opt =  torch.optim.SGD(self.softmax_head .parameters(),
-                                lr=self.params.softmaxhead_lr,
-                                )
+    # def init_seperate_softmax(self,softmax_inputdim):
+    #     self.softmax_head = maybe_cuda(build_mlp(input_size=softmax_inputdim,
+    #         output_size=100,
+    #         n_layers=self.params.softmax_nlayers,
+    #         size=self.params.softmax_nsize,
+    #         use_dropout=self.params.softmax_dropout,))
+    #     self.softmax_opt =  torch.optim.SGD(self.softmax_head .parameters(),
+    #                             lr=self.params.softmaxhead_lr,
+    #                             )
 
 
 

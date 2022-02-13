@@ -1,10 +1,5 @@
-# Online Continual Learning
-![](aaai_aser.jpg)
+# Repeated Augmented Replay (RAR) FOR ONLINE CONTINUAL LEARNING
 
-Official repository of 
-* [Online Class-Incremental Continual Learning with Adversarial Shapley Value](https://arxiv.org/abs/2009.00093) (AAAI 2021)
-* [Supervised Contrastive Replay: Revisiting the Nearest Class Mean Classifier in Online Class-Incremental Continual Learning](https://arxiv.org/abs/2103.13885) (CVPR2021 Workshop)
-* [Online Continual Learning in Image Classification: An Empirical Survey](https://arxiv.org/pdf/2101.10423.pdf) (Under review)
 
 
 ## Requirements
@@ -225,10 +220,8 @@ Under review, preprint on arXiv [here](https://arxiv.org/pdf/2101.10423.pdf).
 ```
 
 ## Contact & Contribution
-- [Zheda Mai](https://zheda-mai.github.io/) (Corresponding author)  
-zheda.mai@mail.utoronto.ca
-- [Ruiwen Li](https://www.linkedin.com/in/ruiwen-li-4a272b55/)
-- [Dongsub Shim](https://github.com/DongsubShim)
+- [Yaqian Zhang](https://zheda-mai.github.io/) (Corresponding author)  
+yaqianz@waikato.ac.nz
 
 
 ## Acknowledgments
