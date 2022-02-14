@@ -110,7 +110,8 @@ def get_prefix(params,run):
 
     ### replay_dynamics
     if(params.agent == "ER_dyna_iter"):
-        trick += params.dyna_type[:3]+"_"
+        trick += params.dyna_type[:3]+"_"+str(params.train_acc_max)+"_"+str(params.train_acc_min)
+        trick += "_"+str(params.mem_iter_max)+"_"+str(params.mem_iter_min)+"_"
     # if(params.dyna_mem_iter != "None"):
     #     if(params.dyna_mem_iter == "dyna"):
     #         trick += "dMIter_"+str(params.mem_iter_max)+str(params.mem_iter_min)+"_"

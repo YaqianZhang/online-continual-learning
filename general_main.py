@@ -258,15 +258,17 @@ if __name__ == "__main__":
     # parser.add_argument("--only_task_seen",dest="only_task_seen",default=False,type=boolean_string)
     parser.add_argument("--dyna_mem_iter",dest='dyna_mem_iter',default="None",type=str,choices=["random","STOP","None"],
                         help='If True, adjust mem iter')
+    parser.add_argument("--train_acc_max",default=0.95)
+    parser.add_argument("--train_acc_min",default=0.85)
 
     # parser.add_argument("--replay_old_only",dest="replay_old_only",default=False,type=boolean_string,)
     #
     # parser.add_argument("--split_new_old",dest="split_new_old",default=False,type=boolean_string)
-    # parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=20, type=int,
-    #                     help='')
-    #
-    # parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
-    #                     help='')
+    parser.add_argument('--mem_iter_max', dest='mem_iter_max', default=20, type=int,
+                        help='')
+
+    parser.add_argument('--mem_iter_min', dest='mem_iter_min', default=1, type=int,
+                        help='')
     # parser.add_argument('--mem_iter_std', dest='mem_iter_std', default=0.3, type=int,
     #                     help='')
     #
@@ -301,7 +303,7 @@ if __name__ == "__main__":
     #                     help='If True, evaluate model on the test buffer during CL training')
     # parser.add_argument("--test_buffer_type",default="class_balance",choices=["class_balance","reservior_sampling"])
     # parser.add_argument("--test_retrieve_num",default=300,type=int)
-    # parser.add_argument("--dyna_type",default="train_acc",choices=["random","train_acc"])
+    parser.add_argument("--dyna_type",default="train_acc",choices=["random","train_acc"])
     # parser.add_argument('--use_tmp_buffer',dest='use_tmp_buffer',default=False,type=boolean_string,
     #                     help='If True, use a tmp buffer to store the to-be-insert samples from new task/replace indices '
     #                          'and insert these into memory at the end of new task')
