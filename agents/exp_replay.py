@@ -173,9 +173,10 @@ class ExperienceReplay(ContinualLearner):
             #     self.close_loop_cl.last_train_loss = mem_loss.item()
 
 
-            #loss = replay_para['mem_ratio'] * mem_loss+ \
-                   #replay_para['incoming_ratio'] * incoming_loss
-            loss = torch.mean(softmax_loss_full)
+            loss = mem_loss+ incoming_loss
+            # loss = replay_para['mem_ratio'] * mem_loss+ \
+            #        replay_para['incoming_ratio'] * incoming_loss
+            #loss = torch.mean(softmax_loss_full)
             train_stats = {'acc_incoming': acc_incoming,
                            'acc_mem': acc_mem,
                            "loss_incoming": incoming_loss.item(),
@@ -185,8 +186,9 @@ class ExperienceReplay(ContinualLearner):
             if(mem_loss> incoming_loss*3):
                 STOP_FLAG = True
         else:
-            loss = torch.mean(softmax_loss_full)
+            #loss = torch.mean(softmax_loss_full)
             #loss = replay_para['incoming_ratio'] * incoming_loss
+            loss = incoming_loss
             acc_mem = None
             mem_loss = None
             train_stats=None
