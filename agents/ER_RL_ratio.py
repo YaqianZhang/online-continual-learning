@@ -5,7 +5,7 @@ from utils.utils import maybe_cuda, AverageMeter
 from agents.exp_replay import  ExperienceReplay
 
 
-from RL.RL_replay_base import RL_replay
+from RL.RL_replay_base_stop import RL_replay
 
 from RL.close_loop_cl import close_loop_cl
 

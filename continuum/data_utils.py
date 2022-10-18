@@ -14,7 +14,7 @@ def create_task_composition(class_nums, num_tasks, fixed_order=False,start_class
     for tt in range(num_tasks):
         tt_offset = tt * classes_per_task
         task_labels.append(list(label_array[tt_offset:tt_offset + classes_per_task]))
-        print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
+        #print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
     return task_labels
 
 def create_task_composition_order(class_nums, num_tasks, start_class = 0):
@@ -27,8 +27,8 @@ def create_task_composition_order(class_nums, num_tasks, start_class = 0):
 
     task_labels = [label[task_org[i] * classes_per_task:task_org[i] * classes_per_task + classes_per_task] for i in range(num_tasks)]
 
-    for tt in range(num_tasks):
-        print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
+    # for tt in range(num_tasks):
+    #     print('Task: {}, Labels:{}'.format(tt, task_labels[tt]))
     print("task order:",task_org)
     return task_labels
 

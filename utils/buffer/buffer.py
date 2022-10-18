@@ -25,7 +25,9 @@ class Buffer(torch.nn.Module):
         self.buffer_size = mem_size
         print('buffer has %d slots' % buffer_size)
         input_size = input_size_match[params.data]
+        class_num = n_classes[self.params.data]
         self.buffer_img = torch.FloatTensor(buffer_size, *input_size).fill_(0)
+
         self.buffer_label = torch.LongTensor(buffer_size).fill_(0)
         self.buffer_new_old = torch.LongTensor(buffer_size).fill_(0)
         #self.buffer_img = maybe_cuda(torch.FloatTensor(buffer_size, *input_size).fill_(0))
@@ -143,13 +145,13 @@ class Buffer(torch.nn.Module):
     def overwrite(self,idx_map,x,y):
         ## zyq: save replay_times
         #print("----buffer overwrite")
-        for i in list(idx_map.keys()):
-            replay_times = self.buffer_replay_times[i].detach().cpu().numpy()
-            self.unique_replay_list.append(int(replay_times))
-            self.buffer_replay_times[i]=0
-            self.buffer_last_replay[i]=0
-            sample_label = int(self.buffer_label[i].detach().cpu().numpy())
-            self.replay_sample_label.append(sample_label)
+        # for i in list(idx_map.keys()):
+        #     replay_times = self.buffer_replay_times[i].detach().cpu().numpy()
+        #     self.unique_replay_list.append(int(replay_times))
+        #     self.buffer_replay_times[i]=0
+        #     self.buffer_last_replay[i]=0
+        #     sample_label = int(self.buffer_label[i].detach().cpu().numpy())
+        #     self.replay_sample_label.append(sample_label)
 
         self.buffer_img[list(idx_map.keys())] = x[list(idx_map.values())]
         self.buffer_label[list(idx_map.keys())] = y[list(idx_map.values())]

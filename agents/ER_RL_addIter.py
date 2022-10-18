@@ -2,15 +2,15 @@ from torch.utils import data
 from continuum.data_utils import dataset_transform
 from utils.setup_elements import transforms_match
 from utils.utils import maybe_cuda, AverageMeter
-from agents.exp_replay import  ExperienceReplay
+from agents.unused.exp_replay_cl import  ExperienceReplay_cl
 
 
-from RL.RL_replay_base import RL_replay
+from RL.RL_replay_base_stop import RL_replay
 
 from RL.close_loop_cl import close_loop_cl
 
 
-class ER_RL_addIter(ExperienceReplay):
+class ER_RL_addIter(ExperienceReplay_cl):
     def __init__(self, model, opt, params):
         super(ER_RL_addIter, self).__init__(model, opt, params)
         #if(self.params.online_hyper_RL or self.params.scr_memIter ):
@@ -44,13 +44,12 @@ class ER_RL_addIter(ExperienceReplay):
                 batch_x,batch_y = batch_data
                 batch_x = maybe_cuda(batch_x, self.cuda)
                 batch_y = maybe_cuda(batch_y, self.cuda)
-                batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
+                #batch_x,batch_y = self.memory_manager.update_before_training(batch_x,batch_y)
                 self.set_memIter()
 
                 concat_batch_x, concat_batch_y, mem_num = self.concat_memory_batch(batch_x, batch_y)
-
-
-                train_stats = self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i, self.replay_para,
+                ############ may need to add early stop
+                train_stats,STOP_FLAG = self._batch_update(concat_batch_x, concat_batch_y, losses_batch, acc_batch, i, self.replay_para,
                                    mem_num=mem_num)
 
                 self.close_loop_cl.train_stats = train_stats #( acc_incoming=acc_incoming, incoming_loss=incoming_loss)

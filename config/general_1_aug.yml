@@ -45,7 +45,16 @@ parameters:
   weight_decay: 0.0001
 
   randaug: True
-  randaug_N: 1
-
+  #randaug_M: 14
+  resnet_size: "reduced"
+  aug_target: "both"
+  aug_start: 0
+  randaug_type: "static"
+  scraug: False
+  immediate_evaluate: False
+  test_add_buffer: False
+  dyna_mem_iter: "STOP_loss"
+  stop_ratio : 3
+  offline: False
 
 

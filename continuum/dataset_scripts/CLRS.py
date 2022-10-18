@@ -41,12 +41,18 @@ class CLRS25(DatasetBase):
 
     def setup(self, cur_run):
         self.task_labels =[]
+        if(self.params.cl_type == "ni"):
+            label = "/label/NI/run"
+        elif(self.params.cl_type == "nc"):
+            label = "/label/NC/run"
+        else:
+            raise NotImplementedError("cl_type")
 
 
-        for task_id in range(1,6):
+        for task_id in range(1,self.params.num_tasks+1):
 
 
-            train_path_file = self.root + "/label/NC/run" + str(cur_run) + "/train_task" + str(task_id) + ".txt"
+            train_path_file = self.root + label + str(cur_run) + "/train_task" + str(task_id) + ".txt"
             train_data = pd.read_csv(train_path_file, delimiter="\t")
 
             train_label = list(train_data.values[:, 1])
@@ -61,7 +67,7 @@ class CLRS25(DatasetBase):
 
 
 
-        test_path_file = self.root +"/label/NC/run"+str(cur_run)+"/test.txt"
+        test_path_file = self.root +label+str(cur_run)+"/test.txt"
         test_data = pd.read_csv(test_path_file, delimiter="\t")
         test_idx_list = list(test_data.values[:, 0])
         test_label = list(test_data.values[:, 1])
@@ -88,7 +94,7 @@ class CLRS25(DatasetBase):
 
 
 
-        if self.scenario == 'nc' or self.scenario == 'nc_balance' :
+        if self.scenario == 'nc'  :
 
             for labels in self.task_labels:
                 labels = list(set(labels))
@@ -96,6 +102,13 @@ class CLRS25(DatasetBase):
                 x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)
 
                 self.test_set.append((x_test, y_test))
+        else:
+            labels = list(set(self.task_labels[0]))
+            print(labels)
+            x_test, y_test = load_task_with_labels(self.test_data, self.test_label, labels)
+
+            self.test_set.append((x_test, y_test))
+
         # elif self.scenario == 'ni':
         #     self.test_set = [(self.test_data, self.test_label)]
 
@@ -103,7 +116,7 @@ class CLRS25(DatasetBase):
             self.train_id_all = []
             self.train_label_all =[]
             for task_id in range(5):
-                train_path_file = self.root + "/label/NC/run" + str(cur_run) + "/train_task" + str(
+                train_path_file = self.root + label + str(cur_run) + "/train_task" + str(
                     task_id + 1) + ".txt"
                 train_data = pd.read_csv(train_path_file, delimiter="\t")
                 train_idx_list = list(train_data.values[:, 0])
@@ -114,7 +127,13 @@ class CLRS25(DatasetBase):
     def new_task(self, cur_task, **kwargs):
         cur_run = kwargs['cur_run']
         s = time.time()
-        train_path_file = self.root +"/label/NC/run"+str(cur_run)+"/train_task"+str(cur_task+1)+".txt"
+        if(self.params.cl_type == "nc"):
+            train_path_file = self.root +"/label/NC/run"+str(cur_run)+"/train_task"+str(cur_task+1)+".txt"
+        elif(self.params.cl_type == "ni"):
+
+            train_path_file = self.root + "/label/NI/run" + str(cur_run) + "/train_task" + str(cur_task + 1) + ".txt"
+        else:
+            raise NotImplementedError("cl_type")
         train_data = pd.read_csv(train_path_file, delimiter="\t")
         train_idx_list = list(train_data.values[:, 0])
         train_label = list(train_data.values[:, 1])

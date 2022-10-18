@@ -3,17 +3,24 @@ from continuum.dataset_scripts.cifar100 import CIFAR100
 from continuum.dataset_scripts.cifar10 import CIFAR10
 from continuum.dataset_scripts.core50 import CORE50
 from continuum.dataset_scripts.CLRS import CLRS25
+from continuum.dataset_scripts.imagenet import IMAGENET1000
 from continuum.dataset_scripts.mini_imagenet import Mini_ImageNet
 from continuum.dataset_scripts.openloris import OpenLORIS
 from agents.exp_replay import ExperienceReplay
-from agents.exp_replay_offline import ExperienceReplay_offline
+from agents.unused.exp_replay_dyna_aug import ExperienceReplay_aug
+from agents.unused.exp_replay_dyna_ratio import ExperienceReplay_ratio
+from agents.unused.exp_replay_offline import ExperienceReplay_offline
+from agents.unused.exp_replay_cl import ExperienceReplay_cl
+from agents.unused.exp_replay_cl_bandits import ExperienceReplay_cl_bandits
+from agents.unused.exp_replay_cl_bandits_ts import ExperienceReplay_cl_bandits_ts
+from agents.unused.exp_replay_batchsize import ExperienceReplay_batchsize
 #from unused.rl_exp_replay import RL_ExperienceReplay
 from agents.agem import AGEM
 from agents.ewc_pp import EWC_pp
 from agents.cndpm import Cndpm
 from agents.lwf import Lwf
 from agents.icarl import Icarl
-from agents.lamaml import LAMAML
+#from agents.lamaml import LAMAML
 from utils.buffer.random_retrieve import Random_retrieve
 from utils.buffer.reservoir_update import Reservoir_update
 
@@ -24,18 +31,39 @@ from utils.buffer.aser_retrieve import ASER_retrieve
 from utils.buffer.aser_update import ASER_update
 
 from agents.scr import SupContrastReplay
-from agents.scr_ratio import SCR_RL_ratio
-from agents.scr_rl_addIter import SCR_RL_iter
-from agents.ER_RL_ratio import ER_RL_ratio
-#from agents.ER_RL_iter import ER_RL_iter
-from agents.ER_RL_addIter import ER_RL_addIter
+# from agents.scr_ratio import SCR_RL_ratio
+# from agents.scr_rl_addIter import SCR_RL_iter
+# from agents.ER_RL_iter import ER_RL_iter
+from agents.unused.ER_RL_addIter import ER_RL_addIter
+from agents.unused.ER_RL_addIter_stop import ER_RL_addIter_stop
+from agents.unused.ER_RL_addIter_stop_new import ER_RL_addIter_stop_new
 from agents.ER_dyna_iter import ER_dyna_iter
+from agents.ER_dyna_rnd import ER_dyna_rnd
+from agents.ER_dyna_iter_aug import ER_dyna_iter_aug
+from agents.ER_dyna_iter_aug_only import ER_dyna_iter_aug_only
+from agents.unused.ER_dyna_iter_aug_dbpg import ER_dyna_iter_aug_dbpg
+from agents.ER_dyna_iter_aug_dbpg_joint import ER_dyna_iter_aug_dbpg_joint
 from utils.buffer.sc_retrieve import Match_retrieve
 from utils.buffer.mem_match import MemMatch_retrieve
 
+from agents.ER_compress import ER_compress
+from agents.ER_compress_both import ER_compress_both
+from agents.exp_replay_test import ER_test
+from agents.DER import DER
+from agents.exp_replay_ratio3 import ER_ratio3
+from agents.exp_replay_ratio2 import ER_ratio2
+from agents.scr_spread import SCR_spread
+from agents.scr_spread_class import SCR_spread_class
 
+from agents.DER_head import DER_head
+from agents.DER_head_t1 import DER_head_t1
+from agents.DERPP_head_t1 import DERPP_head_t1
+from agents.scr_der import SCR_der
+from agents.DERPP import DERPP
+from agents.DERPP_head import DERPP_head
 
 data_objects = {
+    'imagenet1000':IMAGENET1000,
     'cifar100': CIFAR100,
     'cifar10': CIFAR10,
     'core50': CORE50,
@@ -44,14 +72,42 @@ data_objects = {
     'clrs25':CLRS25
 }
 agents = {
+    "SCR_der":SCR_der,
+    "ER_ratio3":ER_ratio3,
+    "ER_ratio2": ER_ratio2,
+    "SCR_spread_class":SCR_spread_class,
+    "SCR_spread":SCR_spread,
+
+    "DER": DER,
+    "DER_head":DER_head,
+    "DER_head_t1":DER_head_t1,
+    "DERPP_head_t1":DERPP_head_t1,
+    "DERPP":DERPP,
+    "DERPP_head":DERPP_head,
+    "ER_test":ER_test,
+    "ER_compress": ER_compress,
+    "ER_compress_both": ER_compress_both,
     'ER': ExperienceReplay,
+    'ER_cl': ExperienceReplay_cl,
+    "ER_cl_bandits":ExperienceReplay_cl_bandits,
+    "ER_cl_bandits_ts":ExperienceReplay_cl_bandits_ts,
+    "ER_batchsize":ExperienceReplay_batchsize,
+    'ER_aug': ExperienceReplay_aug,
+    "ER_ratio":ExperienceReplay_ratio,
     "ER_offline":ExperienceReplay_offline,
-    "ER_RL_ratio":ER_RL_ratio,
+  #  "ER_RL_ratio":ER_RL_ratio,
 #"ER_RL_iter":ER_RL_iter,
 "ER_RL_addIter":ER_RL_addIter,
+    "ER_RL_addIter_stop": ER_RL_addIter_stop,
+    "ER_RL_addIter_stop_new": ER_RL_addIter_stop_new,
+    "ER_dyna_rnd":ER_dyna_rnd,
     "ER_dyna_iter":ER_dyna_iter,
+    "ER_dyna_iter_aug":ER_dyna_iter_aug,
+    "ER_dyna_iter_aug_only":ER_dyna_iter_aug_only,
+    "ER_dyna_iter_aug_dbpg":ER_dyna_iter_aug_dbpg,
+    "ER_dyna_iter_aug_dbpg_joint":ER_dyna_iter_aug_dbpg_joint,
     #'RLER': RL_ExperienceReplay,
-    'LAMAML': LAMAML,
+    #'LAMAML': LAMAML,
     'EWC': EWC_pp,
     'AGEM': AGEM,
     'CNDPM': Cndpm,
@@ -59,8 +115,8 @@ agents = {
     'ICARL': Icarl,
     'GDUMB': Gdumb,
     'SCR': SupContrastReplay,
-    'SCR_RL_ratio':SCR_RL_ratio,
-'SCR_RL_iter':SCR_RL_iter,
+#     'SCR_RL_ratio':SCR_RL_ratio,
+# 'SCR_RL_iter':SCR_RL_iter,
     #'SCR_META':SupContrastReplay_meta,
 }
 

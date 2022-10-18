@@ -3,4 +3,5 @@ parameters:
   num_tasks: 20
   cl_type: nc
   data_name: cifar100_nc
+  GPU_ID: 0
 

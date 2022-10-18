@@ -54,9 +54,10 @@ if __name__ == "__main__":
                         help='use tha val batches to train')
     parser.add_argument('--trick', type=str, default=None)
     parser.add_argument('--exp_name',type=str,default="")
-    parser.add_argument('--GPU_ID', dest='GPU_ID', default= 0,
+    parser.add_argument('--GPU_ID', dest='GPU_ID', default= 6,
                         type=int,
                         help="")
     args = parser.parse_args()
-    torch.cuda.set_device(args.GPU_ID)  # args.GPU_ID
+    # args.cuda = torch.cuda.is_available()
+    # torch.cuda.set_device(args.GPU_ID)#args.GPU_I
     main(args)

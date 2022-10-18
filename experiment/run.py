@@ -12,7 +12,7 @@ from utils.io import load_yaml, save_dataframe_csv, check_ram_usage
 import pandas as pd
 import os
 import pickle
-from RL.evaluator import evaluator
+#from RL.evaluator import evaluator
 import torch
 from experiment.save_prefix import get_prefix
 
@@ -29,7 +29,7 @@ def save_stats_acc(params,accuracy_list,run=1,loss_list=[]):
 
 
 
-def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[]):
+def save_stats(params,agent,model,accuracy_list,running_time,run=1,immediate_acc_list=[]):
 
     prefix = get_prefix(params,run)
 
@@ -38,7 +38,8 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
 
     #print("acc_zyq",accuracy_list) #+str(params.eps_mem_batch)+
     np.save(prefix + "accuracy_list.npy", accuracy_list)
-    np.save(prefix + "loss_list.npy", loss_list)
+    #np.save(prefix + "loss_list.npy", loss_list)
+    np.save(prefix + "immediate_acc_list.npy", immediate_acc_list)
 
 
     # if(params.batch != 9):
@@ -53,20 +54,22 @@ def save_stats(params,agent,model,accuracy_list,running_time,run=1,loss_list=[])
 
     if(params.agent== 'ER' or params.agent == "ICARL"):
         agent.buffer.save_buffer_info(prefix)
-    #if( params.RL_type != "NoRL" ):
-    # if(agent.RL_replay != None):
-    #     print("save reward in run")
-    #     if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
-    #                                                                          "ER_RL_ratio","ER_RL_iter",
-    #                                                                          "ER_RL_addIter","ER_dyna_iter"]):
-    #         agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
-    #
-    #     else:
-    #         agent.RL_agent.save_RL_stats(prefix) # q, reward, action
-    #
-    #         #agent.RL_env.save_task_reward(prefix)
-    #
-    # agent.save_mem_iters(prefix) ## memiter raio
+   # # if( params.RL_type != "NoRL" ):
+   #  if(agent.RL_replay != None and agent.RL_replay != "NoRL"):
+   #      print("save reward in run")
+   #      agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
+   #      agent.RL_replay.RL_agent.ExperienceReplayObj.save_buff(prefix)
+        # if (params.online_hyper_RL or params.scr_memIter or params.agent in ["SCR_RL_ratio","SCR_RL_iter",
+        #                                                                      "ER_RL_ratio","ER_RL_iter",
+        #                                                                      "ER_RL_addIter","ER_dyna_iter"]):
+        #     agent.RL_replay.RL_agent.save_RL_stats(prefix)  # q, reward, action
+        #
+        # else:
+        #     agent.RL_agent.save_RL_stats(prefix) # q, reward, action
+
+            #agent.RL_env.save_task_reward(prefix)
+
+    agent.save_mem_iters(prefix) ## memiter raio
 
 def reset_model(model):
     for layer in model.children():
@@ -79,8 +82,8 @@ def save_obj(obj, name ):
 def save_task_info(params,data_continuum,run):
 
     prefix = get_prefix(params,run)
-    task_label = np.array(data_continuum.data_object.task_labels)
-    np.save(prefix + "task_label.npy", task_label)
+    # task_label = np.array(data_continuum.data_object.task_labels)
+    # np.save(prefix + "task_label.npy", task_label)
     save_obj(params,prefix+"para")
 
 
@@ -109,6 +112,7 @@ def multiple_run(params,store=False,save_path=False):
     accuracy_list = []
     for run in range(params.num_runs):
         tmp_acc = []
+        tmp_acc_immediate = []
         run_start = time.time()
         data_continuum.new_run()
 
@@ -121,7 +125,11 @@ def multiple_run(params,store=False,save_path=False):
 
 
         # prepare val data loader
-        test_loaders = setup_test_loader(data_continuum.test_data(), params)
+        if(params.agent == "ER_test"):
+            test_loaders=data_continuum.test_data()
+        else:
+            test_loaders = setup_test_loader(data_continuum.test_data(), params)
+        agent.test_loaders = test_loaders
 
 
         # for task, test_loader in enumerate(test_loaders):
@@ -130,49 +138,54 @@ def multiple_run(params,store=False,save_path=False):
 
         save_task_info(params,data_continuum,run)
 
-        if(params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
-            agent.evaluator = evaluator(test_loaders)
-        else:
-            agent.evaluator = None
+        # if(params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
+        #     agent.evaluator = evaluator(test_loaders)
+        # else:
+        #     agent.evaluator = None
+
+        for cycle in range(params.num_cycle):
+            data_continuum.cur_task=0
+
+            for i, (x_train, y_train, labels) in enumerate(data_continuum):
+                # if( i>1):
+                #     break  ## debug
 
 
-
-        for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            if(params.debug_mode and i>2):
-                break  ## debug
-            #
-
-            print("-----------run {} training task {}-------------".format(run, i))
-            print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
+                print("-----------run {} cycle{} training task {}-------------".format(run,cycle, i))
+                #print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
+                print('task '+str(i)+" class num:",len(labels))
 
 
-            agent.train_learner(x_train, y_train,)
-           # agent.train_learner(x_train, y_train, labels)
-            acc_array = agent.evaluate(test_loaders)
-            tmp_acc.append(acc_array)
+                immediate_acc_list = agent.train_learner(x_train, y_train,)
+               # agent.train_learner(x_train, y_train, labels)
+                acc_array = agent.evaluate(test_loaders)
+                tmp_acc.append(acc_array)
+                tmp_acc_immediate.append(immediate_acc_list)
 
-            # if (params.RL_type != "NoRL"):
-            if (params.use_test_buffer):
+                # if (params.RL_type != "NoRL"):
+                # if (params.use_test_buffer):
+                #
+                #     if (params.agent == "RLER"):
+                #         pass
+                #     else:
+                #         print("update",agent.close_loop_cl.task_tacc)
+                #
+                #         agent.close_loop_cl.update_task_reward()
 
-                if (params.agent == "RLER"):
-                    pass
-                else:
-                    print("update",agent.close_loop_cl.task_tacc)
 
-                    agent.close_loop_cl.update_task_reward()
-
-        run_end = time.time()
-        print(
-            "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
-                                                                           run_end - run_start))
-        accuracy_list.append(np.array(tmp_acc))
-    accuracy_list = np.array(accuracy_list)
+            run_end = time.time()
+            print(
+                "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
+                                                                               run_end - run_start))
+            accuracy_list.append(np.array(tmp_acc))
+    accuracy_list = np.array(accuracy_list)  # 1*task num*2*task_num
+    print(accuracy_list.shape)
     end = time.time()
     running_time = end-start
 
-    save_stats(params, agent, model,accuracy_list,running_time)
+    save_stats(params, agent, model,accuracy_list,running_time,immediate_acc_list)
 
-    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
+    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list[:,:,0,:])
     end = time.time()
 
     print('----------- Total {} run: {}s -----------'.format(params.num_runs, end - start))
@@ -206,23 +219,27 @@ def multiple_RLtrainig_run(params):
         data_continuum.new_run()
         # initailize agent model
 
-        agent.initialize_agent(params)
+        # agent.initialize_agent(params)
         agent.task_seen =0
-        if (params.RL_type != "NoRL"):
-            agent.RL_env.initialize()
+        # if (params.RL_type != "NoRL"):
+        #     agent.RL_env.initialize()
         #print("buffer index",agent.buffer.current_index,agent.RL_env.test_buffer.current_index)
 
+        model = setup_architecture(params)
+        model = maybe_cuda(model, params.cuda)
+        opt = setup_opt(params.optimizer, model, params.learning_rate, params.weight_decay)
+        agent = agents[params.agent](model, opt, params)
 
 
         # prepare val data loader
         test_loaders = setup_test_loader(data_continuum.test_data(), params)
         save_task_info(params,data_continuum,0)
 
-        if (params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
-
-            agent.evaluator = evaluator(test_loaders)
-        else:
-            agent.evaluator = None
+        # if (params.reward_type == "real_reward" or params.online_hyper_valid_type == "real_data"):
+        #
+        #     agent.evaluator = evaluator(test_loaders)
+        # else:
+        #     agent.evaluator = None
 
         for i, (x_train, y_train, labels) in enumerate(data_continuum):
             if(params.debug_mode and i>2):
@@ -232,33 +249,34 @@ def multiple_RLtrainig_run(params):
             print("-----------run {} training task {}-------------".format(run, i))
             print('task '+str(i)+' size: {}, {}'.format(x_train.shape, y_train.shape))
 
-            agent.train_learner(x_train, y_train,labels)
-            acc_array,loss_array = agent.evaluate(test_loaders)
+            agent.train_learner(x_train, y_train,)
+            acc_array = agent.evaluate(test_loaders)
             tmp_acc.append(acc_array)
-            tmp_loss.append(loss_array)
+            #mp_loss.append(loss_array)
             # if (params.RL_type != "NoRL"):
-            if(params.use_test_buffer):
-
-                agent.close_loop_cl.update_task_reward()
+            # if(params.use_test_buffer):
+            #
+            #     agent.close_loop_cl.update_task_reward()
         run_end = time.time()
         print(
             "-----------run {}-----------avg_end_acc {}-----------train time {}".format(run, np.mean(tmp_acc[-1]),
                                                                            run_end - run_start))
         accuracy_list.append(np.array(tmp_acc))
-        loss_list.append(np.array(tmp_loss))
+        #loss_list.append(np.array(tmp_loss))
         #if(run%3==0):
         accuracy_list_arr = np.array(accuracy_list)
-        loss_list_arr = np.array(loss_list)
-        save_stats(params, agent, model, accuracy_list_arr,run,loss_list_arr)
+        #loss_list_arr = np.array(loss_list)
+        save_stats(params, agent, model, accuracy_list_arr,run,)
 
     accuracy_list = np.array(accuracy_list)
-    loss_list = np.array(loss_list)
+    #loss_list = np.array(loss_list)
     end = time.time()
     running_time = end-start
     save_stats(params, agent, model,accuracy_list,running_time,run,loss_list)
 
-    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
+    #avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list)
 
+    avg_end_acc, avg_end_fgt, avg_acc, avg_bwtp, avg_fwt = compute_performance(accuracy_list[:,:,0,:])
 
     accuracy_array = np.array(accuracy_list)
 
@@ -359,6 +377,10 @@ def multiple_run_tune(defaul_params, tune_params, save_path):
 
 def multiple_run_tune_separate(default_params, tune_params, save_path):
     # Set up data stream
+    # print(default_params.GPU_ID)
+    # assert False
+    #args.cuda = torch.cuda.is_available()
+    torch.cuda.set_device(default_params.GPU_ID)#args.GPU_ID
     print("~~~~~~~~ run tune seperate")
     start = time.time()
     print('Setting up data stream')
@@ -507,20 +529,20 @@ def single_tune_train_val(data_continuum, default_params, tune_params, params_ke
                     final_params = SimpleNamespace(**final_params)
                     print('Tuning is done. Best hyper parameter set is {}'.format(best_params))
                     break
-
-        data_continuum.reset_run()
-        # set up
-        model = setup_architecture(final_params)
-        model = maybe_cuda(model, final_params.cuda)
-        opt = setup_opt(final_params.optimizer, model, final_params.learning_rate, final_params.weight_decay)
-        agent = agents[final_params.agent](model, opt, final_params)
-        print('Training Start')
-        for i, (x_train, y_train, labels) in enumerate(data_continuum):
-            print("----------run {} training batch {}-------------".format(run, i))
-            print('size: {}, {}'.format(x_train.shape, y_train.shape))
-            agent.train_learner(x_train, y_train)
-            acc_array = agent.evaluate(test_loaders_full)
-            tmp_acc.append(acc_array)
+      ############# run experiment after tuning
+        # data_continuum.reset_run()
+        # # set up
+        # model = setup_architecture(final_params)
+        # model = maybe_cuda(model, final_params.cuda)
+        # opt = setup_opt(final_params.optimizer, model, final_params.learning_rate, final_params.weight_decay)
+        # agent = agents[final_params.agent](model, opt, final_params)
+        # print('Training Start')
+        # for i, (x_train, y_train, labels) in enumerate(data_continuum):
+        #     print("----------run {} training batch {}-------------".format(run, i))
+        #     print('size: {}, {}'.format(x_train.shape, y_train.shape))
+        #     agent.train_learner(x_train, y_train)
+        #     acc_array = agent.evaluate(test_loaders_full)
+        #     tmp_acc.append(acc_array)
 
     else:
         x_train_offline = []
@@ -544,17 +566,18 @@ def single_tune_train_val(data_continuum, default_params, tune_params, params_ke
         final_params = SimpleNamespace(**final_params)
         # set up
         print('Tuning is done. Best hyper parameter set is {}'.format(best_params))
-        model = setup_architecture(final_params)
-        model = maybe_cuda(model, final_params.cuda)
-        opt = setup_opt(final_params.optimizer, model, final_params.learning_rate, final_params.weight_decay)
-        agent = agents[final_params.agent](model, opt, final_params)
-        print('Training Start')
-        x_train_offline = np.concatenate(x_train_offline, axis=0)
-        y_train_offline = np.concatenate(y_train_offline, axis=0)
-        print("----------run {} training-------------".format(run))
-        print('size: {}, {}'.format(x_train_offline.shape, y_train_offline.shape))
-        agent.train_learner(x_train_offline, y_train_offline)
-        acc_array = agent.evaluate(test_loaders_full)
-        tmp_acc.append(acc_array)
+        ############# run experiment after tuning
+        # model = setup_architecture(final_params)
+        # model = maybe_cuda(model, final_params.cuda)
+        # opt = setup_opt(final_params.optimizer, model, final_params.learning_rate, final_params.weight_decay)
+        # agent = agents[final_params.agent](model, opt, final_params)
+        # print('Training Start')
+        # x_train_offline = np.concatenate(x_train_offline, axis=0)
+        # y_train_offline = np.concatenate(y_train_offline, axis=0)
+        # print("----------run {} training-------------".format(run))
+        # print('size: {}, {}'.format(x_train_offline.shape, y_train_offline.shape))
+        # agent.train_learner(x_train_offline, y_train_offline)
+        # acc_array = agent.evaluate(test_loaders_full)
+        # tmp_acc.append(acc_array)
 
 
